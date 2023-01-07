@@ -9,4 +9,4 @@ sort_by = "weight"
 
 - To learn how to be able to type math with latex faster than one could imagine: [How I'm able to take notes in mathematics lectures using LaTeX and Vim](https://castel.dev/post/lecture-notes-1/)
 
-- To understand how fluid simulation works, with mathematical explanation and equations (finally!) applied to WebGL [Fluid Simulation](https://jamie-wong.com/2016/08/05/webgl-fluid-simulation/)
+- To understand how fluid simulation works, with mathematical explanations and equations (finally!) applied to WebGL [Fluid Simulation](https://jamie-wong.com/2016/08/05/webgl-fluid-simulation/)
