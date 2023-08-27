@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://spineki.github.io/</loc>
+    </url>
+    <url>
+        <loc>https://spineki.github.io/introduction/</loc>
+    </url>
+    <url>
+        <loc>https://spineki.github.io/maths/</loc>
+    </url>
+    <url>
+        <loc>https://spineki.github.io/programming/</loc>
+    </url>
+    <url>
+        <loc>https://spineki.github.io/programming/algorithms/</loc>
+    </url>
+    <url>
+        <loc>https://spineki.github.io/programming/booth-encoding/</loc>
+    </url>
+    <url>
+        <loc>https://spineki.github.io/programming/cpp/</loc>
+    </url>
+    <url>
+        <loc>https://spineki.github.io/programming/gpu/</loc>
+    </url>
+    <url>
+        <loc>https://spineki.github.io/programming/hdl/</loc>
+    </url>
+    <url>
+        <loc>https://spineki.github.io/programming/rust/</loc>
+    </url>
+</urlset>
