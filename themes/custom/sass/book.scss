@@ -1,0 +1,52 @@
+@charset "utf-8";
+
+@import "normalize";
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("Montserrat-Regular.ttf");
+}
+
+* {
+  box-sizing: border-box;
+}
+
+
+body, html {
+  height: 100%;
+}
+
+html {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  font-family: "Montserrat", "Roboto", Arial, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+  background-color: light-dark(#f7f7f7, #111010);
+  max-width: 800px;
+  padding: 2rem 0;
+}
+
+
+@mixin min-screen($min-width: $body-width) {
+   @media screen and (min-width: $min-width) {
+     @content;
+   }
+}
+
+@mixin max-screen($max-width: $body-width) {
+   @media screen and (max-width: $max-width) {
+     @content;
+   }
+}
+
+$sidebar-width: 300px;
+
+@import "navigation";
+@import "content";
+@import "header";
