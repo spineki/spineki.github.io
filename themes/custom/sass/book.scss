@@ -20,16 +20,18 @@ html {
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: var(--background);
+  color: var(--color);
 }
 
 body {
   text-rendering: optimizeLegibility;
   font-family: "Montserrat", "Roboto", Arial, sans-serif;
-  font-size: 14px;
+  font-size: 1.35rem;
+  line-height: 1.8em;
+  font-weight: 300;
   letter-spacing: 0.2px;
-  background-color: light-dark(#f7f7f7, #111010);
   max-width: 800px;
-  padding: 2rem 0;
 }
 
 
@@ -50,3 +52,5 @@ $sidebar-width: 300px;
 @import "navigation";
 @import "content";
 @import "header";
+@import "colors";
+

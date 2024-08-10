@@ -2,12 +2,10 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  color: #000;
   padding-bottom: 20px;
   transition: 0.5s;
   padding: 2em 5em;
-  background: light-dark(white, #1d1c1c);
-  border-radius: 16px;
+  background-color: var(--paper-background);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
 
   .zola-anchor {
