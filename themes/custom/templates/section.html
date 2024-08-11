@@ -10,6 +10,18 @@
 
     {{ section.content | safe }}
 
+    <h2>Posts:</h2>
+
+    <div class="pages-preview">
+        {% for page in section.pages %}
+        <div class="page-preview">
+            <h3> <a href="{{ page.permalink }}">{{ page.title }}</a> </h3>
+            <span class="page-stats"> {{ page.reading_time }} minute {%if page.reading_time > 1%}s{% endif %} read ({{ page.word_count }} words)</span>
+            <p> {{ page.description }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
     </div>
 
     {% if section.toc %}
@@ -17,12 +29,14 @@
             <ul>
                 <h2>Content</h2>
                 {% for h2 in section.toc %}
-                    <li>
-                        <a href="{{ h2.permalink | safe }}">{{ h2.title }}</a>
-                    </li>
+                <li>
+                    <a href="{{ h2.permalink | safe }}">{{ h2.title }}</a>
+                </li>
                 {% endfor %}
             </ul>
         </div>
+    {% else %}
+        <div class="spacer"> </div>
     {% endif %}
 
 {% endblock content %}
