@@ -5,25 +5,73 @@
 }
 
 .spacer {
-  flex: 0.5
+  flex: 0.5;
+  display: none;
+  @media screen and (min-width: $large-screen) {
+    display: flex;
+  }
 }
 
 .page {
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding-bottom: 20px;
-  padding: 1em 5em;
+  padding: 1rem 3rem;
   background-color: var(--paper-background);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-  max-width: 900px;
-  border-radius: 16px;
+  border-radius: 0px 0px 16px 16px;
   text-align: justify;
+  line-height: 1.5;
+  font-size: 1.2rem;
+  max-width: 100%;
+
+  @media (min-width: $medium-screen) {
+    max-width: 700px;
+    padding: 2rem 4rem;
+  }
+
+  @media (min-width: $large-screen) {
+    max-width: 900px;
+    padding: 2rem 6rem;
+  }
+
+  h1, h2 {
+    padding-bottom: 0.8rem;
+    text-wrap: balance;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    padding-top: 0.4rem;
+  }
+
+  p {
+    text-align: justify;
+    margin-bottom: 1.8rem;
+  }
+
 }
 
 .markdown-container {
+  h2, h3 {
+    font-weight: 700;
+    text-wrap: balance;
+    padding-bottom: 0.4rem;
+  }
+
+  h2 {
+    padding-top: 2rem;
+  }
+
+  h3 {
+    padding-top: 1.5rem;
+  }
+
   li {
     list-style-type:disc;
+    p {
+      margin-bottom: 0.5rem;
+    }
   }
   a {
     color: var(--accent-color);
@@ -39,18 +87,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-size: 1.1rem;
 
   .page-preview {
     width: 100%;
     padding-bottom: 1em;
 
     h3 {
-      margin: 0;
+      padding: 0 0 0.5rem 0;
       color: #4eccb4;
     }
 
     p {
-      margin: 0;
+      margin-bottom: 1.25rem;
     }
   }
 }
@@ -58,13 +107,16 @@
 .page-stats {
   display: flex;
   column-gap: 1em;
+  row-gap: 0.5em;
   font-size: 0.8em;
   flex-wrap: wrap;
+  padding-bottom: 1rem;
 
   &>li {
     display: flex;
     column-gap: 1em;
     align-items: center;
+    flex-wrap: wrap;
   }
 }
 
@@ -89,9 +141,10 @@
   font-size: 1rem;
   max-height: calc(100vh - 100px);
   padding: 2em;
+  // width: 100px;
 
   h2 {
-    margin: 0;
+    text-decoration: underline;
   }
 
   li {
@@ -112,18 +165,22 @@
 pre {
   position: relative;
   padding: 1em;
+  padding-top: 3em;
   border-radius: 8px;
-  &:after {
+  max-width: 100%;
+  overflow-x: auto;
+
+  &:before {
     content: attr(data-lang);
     position: absolute;
-    padding: 4px 16px;
-    right: 0px;
+    padding: 4px 8px;
+    left: 0px;
     top: 0px;
+    background: var(--accent-background);
+    border-radius: 8px;
   }
-}
 
-@media (max-width: 1200px) {
-  .spacer {
-    display: none
+  @media screen and (max-width: $small-screen) {
+    font-size: 1rem;
   }
 }
