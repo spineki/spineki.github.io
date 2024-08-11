@@ -13,12 +13,18 @@
 
     {% block js %}
     <script type="text/javascript" src="{{ get_url(path="theme_picker.js") }}"></script>
+    <!-- Math rendering -->
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
+    <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+    </script>
     {% endblock js %}
 
     <!-- CSS -->
     {% block css %}
     <link rel="stylesheet" href="{{ get_url(path="book.css") | safe }}">
     {% endblock css %}
+
 
     {% block extra_head %}
     {% endblock extra_head %}

@@ -7,4 +7,11 @@ date = 2024-08-12
 language = ["rust","c++", "java"]
 +++
 
-This is page about multiple things
+This is a page about multiple things
+
+I want to type something with inline math $e^{i\pi} + 1 = 0$
+
+and block equations:
+$$
+\zeta(s) = \sum_{n=1}^{\infty} \frac{1}{n^s}
+$$
