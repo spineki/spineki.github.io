@@ -1,12 +1,23 @@
+.main-content {
+  display: flex;
+
+  width: 100%;
+}
+
+.spacer {
+  flex: 0.5
+}
+
 .page {
   display: flex;
   flex-direction: column;
   flex: 1;
   padding-bottom: 20px;
-  transition: 0.5s;
-  padding: 2em 5em;
+  padding: 1em 5em;
   background-color: var(--paper-background);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  max-width: 900px;
+  border-radius: 16px;
 
   .zola-anchor {
     color: #4183c4;
@@ -100,7 +111,6 @@
     word-wrap: break-word;
     line-height: 1.7;
     position: relative;
-    max-width: 800px;
     margin: 0 auto;
     padding: 0 15px 40px;
 
@@ -129,6 +139,31 @@
 
     &:hover {
       color: #333;
+    }
+  }
+}
+
+.toc {
+  position: sticky;
+  top: 60px;
+  flex: 0.5;
+  font-size: 1rem;
+  max-height: calc(100vh - 100px);
+
+  h2 {
+    margin: 0;
+  }
+
+  li {
+    margin: 0;
+    padding: 0;
+    font-weight: bold;
+
+    a {
+      text-decoration: none;
+      &:hover {
+        text-decoration: underline;
+      }
     }
   }
 }

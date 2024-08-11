@@ -1,7 +1,6 @@
 .nav-top {
   display: flex;
   background: var(--paper-background);
-  padding: 1em;
   width: 100%;
 
   .nav-content {
@@ -25,7 +24,6 @@
     }
 
     li {
-      list-style-type: none;
       margin: 0;
       padding: 0;
       font-weight: bold;
@@ -36,6 +34,7 @@
 
       a {
         text-decoration: none;
+
         &:hover {
           text-decoration: underline;
         }
@@ -52,6 +51,5 @@
         height: 100%;
       }
     }
-
   }
 }

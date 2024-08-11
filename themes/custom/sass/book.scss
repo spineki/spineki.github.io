@@ -14,6 +14,7 @@
 
 body, html {
   height: 100%;
+  width: 100%;
 }
 
 html {
@@ -31,7 +32,9 @@ body {
   line-height: 1.8em;
   font-weight: 300;
   letter-spacing: 0.2px;
-  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 
@@ -51,6 +54,5 @@ $sidebar-width: 300px;
 
 @import "navigation";
 @import "content";
-@import "header";
 @import "colors";
 

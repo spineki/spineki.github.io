@@ -25,37 +25,9 @@
 </head>
 
 <body>
-    <div class="nav-top">
-        <nav class="nav-content" role="navigation">
-            <ul>
-                <li>
-                    <a href="home"> Home </a>
-                </li>
-                <li>
-                    <form action="/search" method="GET">
-                        <input id="page-search-input" type="search" placeholder="Search..." value="">
-                    </form>
-                </li>
-                <li class="filler"></li>
-                <li>
-                    <color-scheme-picker></color-theme-picker>
-                </li>
-                <li>
-                    <a href="todo"> Todo </a>
-                </li>
-            </ul>
-        </nav>
-        {% block after_menu %}
-        {% endblock after_menu %}
-    </div>
-
-    <div class="page">
-        <div>
-            <div>
-                {% block content %}
-                {% endblock content %}
-            </div>
-        </div>
+    <div class="main-content">
+        {% block content %}
+        {% endblock content %}
     </div>
 </body>
 
