@@ -15,6 +15,7 @@ taxonomies = [{name = "language"}]
 
 [markdown]
 highlight_code = true
+highlight_theme = "dracula"
 render_emoji = true
 
 [extra]

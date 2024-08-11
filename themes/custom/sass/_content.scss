@@ -109,6 +109,19 @@
   }
 }
 
+pre {
+  position: relative;
+  padding: 1em;
+  border-radius: 8px;
+  &:after {
+    content: attr(data-lang);
+    position: absolute;
+    padding: 4px 16px;
+    right: 0px;
+    top: 0px;
+  }
+}
+
 @media (max-width: 1200px) {
   .spacer {
     display: none
