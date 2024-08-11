@@ -1,0 +1,37 @@
+{% extends "index.html" %}
+
+{% block content %}
+    <div class="spacer"></div>
+
+    <div class="page">
+        {% include "header.html" %}
+
+        <h1>{{ section.title }}</h1>
+
+        {{ section.content | safe }}
+
+        <h2>Posts:</h2>
+
+        <div class="pages-preview">
+            {% for page in section.pages %}
+                {% include "page_preview.html" %}
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if section.toc %}
+        <div class="toc spacer">
+            <ul>
+                <h2>Content</h2>
+                {% for h2 in section.toc %}
+                <li>
+                    <a href="{{ h2.permalink | safe }}">{{ h2.title }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <div class="spacer"> </div>
+    {% endif %}
+
+{% endblock content %}

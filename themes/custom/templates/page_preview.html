@@ -1,0 +1,25 @@
+<div class="page-preview red">
+    <h3> <a href="{{ page.permalink }}">{{ page.title }}</a> </h3>
+    <ul class="page-stats">
+        <li>
+            <span>{{ page.date }}</span>
+            <span>{{ page.reading_time }} minute read </span>
+            <span>({{ page.word_count }} words)</span>
+        </li>
+        <li>
+            <ul class="tags">
+                {% for taxo_kind, taxo_names in page.taxonomies %}
+                {% set taxonomy_config = get_taxonomy(kind=taxo_kind) %}
+                {% for taxo_name in taxo_names %}
+                <li>
+                    <a class="tag" href="{{ get_taxonomy_url(kind=taxo_kind, name=taxo_name) }}">
+                        #{{ taxo_name }}
+                    </a>
+                </li>
+                {%endfor%}
+                {% endfor%}
+            </ul>
+        </li>
+    </ul>
+    <p> {{ page.description }}</p>
+</div>

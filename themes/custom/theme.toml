@@ -1,0 +1,8 @@
+name = "custom"
+description = "A custom theme"
+license = "MIT"
+homepage = "https://github.com/spineki"
+min_version = "0.19.1"
+
+[author]
+name = "spineki"

@@ -1,0 +1,21 @@
+{% extends "index.html" %}
+
+{% block content %}
+    <div class="spacer"></div>
+
+    <div class="page">
+        {% include "header.html" %}
+
+        {% set current_taxonomy = get_taxonomy(kind=taxonomy.name) %}
+        <h1><a href="{{ current_taxonomy.permalink}}">{{taxonomy.name}}</a>: {{term.name}}</h1>
+
+        <div class="pages-preview">
+            {% for page in term.pages %}
+                {% include "page_preview.html" %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="spacer"> </div>
+
+{% endblock content %}
