@@ -31,12 +31,16 @@ body {
   text-rendering: optimizeLegibility;
   font-family: "Montserrat", "Roboto", Arial, sans-serif;
   font-size: 1.35rem;
-  line-height: 1.8em;
+  line-height: 1.5em;
   font-weight: 300;
   letter-spacing: 0.2px;
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+p {
+  text-align: justify;
 }
 
 @import "navigation";

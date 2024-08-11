@@ -18,7 +18,21 @@
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
   max-width: 900px;
   border-radius: 16px;
+  text-align: justify;
+}
 
+.markdown-container {
+  li {
+    list-style-type:disc;
+  }
+  a {
+    color: var(--accent-color);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 .pages-preview {
@@ -74,6 +88,7 @@
   flex: 0.5;
   font-size: 1rem;
   max-height: calc(100vh - 100px);
+  padding: 2em;
 
   h2 {
     margin: 0;

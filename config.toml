@@ -21,3 +21,6 @@ render_emoji = true
 # Put all your custom variables here
 description = "a trully interresting description"
 subtitle = "somthing bellow"
+
+[search]
+index_format = "elasticlunr_json"

@@ -5,9 +5,12 @@
                 <a href="/"> Home </a>
             </li>
             <li>
-                <form action="/search" method="GET">
-                    <input id="page-search-input" type="search" placeholder="Search..." value="">
-                </form>
+                <div class="search-container">
+                    <input id="search" type="search" placeholder="Search..." value="">
+                    <div class="search-results">
+                        <ul class="search-results__items"></ul>
+                    </div>
+                </div>
             </li>
             <li class="filler"></li>
             <li>

@@ -9,3 +9,6 @@ highlight_code = true
 
 [extra]
 book_number_chapters = true
+
+[search]
+index_format = "elasticlunr_json"

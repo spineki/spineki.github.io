@@ -30,9 +30,25 @@
             </li>
         </ul>
 
-        {{ page.content | safe }}
+        <div class="markdown-container">
+            <p>{{ page.description }}</p>
+
+            {{ page.content | safe }}
+        </div>
     </div>
 
-    <div class="spacer"> </div>
-
+    {% if page.toc %}
+        <div class="toc spacer">
+            <ul>
+                <h2>Content</h2>
+                {% for h2 in page.toc %}
+                <li>
+                    <a href="{{ h2.permalink | safe }}">{{ h2.title }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <div class="spacer"> </div>
+    {% endif %}
 {% endblock content %}
