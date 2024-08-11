@@ -1,8 +1,10 @@
 +++
 title = "Page 0"
 description = "this is the page 0 with an interresting topic"
-weight = 0
-sort_by = "weight"
+date = 2024-08-10
+
+[taxonomies]
+language = ["c++", "d++"]
 +++
 
-This is page 0
+This is page c++

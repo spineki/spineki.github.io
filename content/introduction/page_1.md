@@ -1,8 +1,11 @@
 +++
 title = "Page 1"
 description = "mj kj mlkj mlk jmlkj mlk jmlk jmlk j"
-weight = 0
-sort_by = "weight"
+
+date = 2024-08-11
+
+[taxonomies]
+language = ["rust"]
 +++
 
-This is page 1
+This is page about rust

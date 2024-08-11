@@ -1,0 +1,20 @@
+{% extends "index.html" %}
+
+{% block content %}
+    <div class="spacer"></div>
+
+    <div class="page">
+        {% include "header.html" %}
+
+        <h1>{{taxonomy.name}}</h1>
+
+        {% for term in terms%}
+            <h2>
+                <a href="{{ term.path }}">#{{term.name}}</a>
+            </h2>
+        {% endfor %}
+    </div>
+
+    <div class="spacer"> </div>
+
+{% endblock content %}

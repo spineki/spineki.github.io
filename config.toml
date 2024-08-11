@@ -11,6 +11,8 @@ theme = "custom"
 
 title = "Compendium"
 
+taxonomies = [{name = "language"}]
+
 [markdown]
 highlight_code = true
 render_emoji = true
