@@ -10,7 +10,6 @@
   @media screen and (min-width: $large-screen) {
     display: flex;
   }
-
 }
 
 .page {
@@ -20,24 +19,30 @@
   padding: 1rem 3rem;
   background-color: var(--paper-background);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-  max-width: 900px;
   border-radius: 0px 0px 16px 16px;
   text-align: justify;
   line-height: 1.5;
   font-size: 1.2rem;
+  max-width: 100%;
+
+  @media (min-width: $medium-screen) {
+    max-width: 700px;
+    padding: 2rem 4rem;
+  }
 
   @media (min-width: $large-screen) {
-    padding: 2em 6em;
+    max-width: 900px;
+    padding: 2rem 6rem;
+  }
+
+  h1, h2 {
+    padding-bottom: 0.8rem;
+    text-wrap: balance;
   }
 
   h1 {
     font-size: 2.4rem;
     padding-top: 0.4rem;
-    padding-bottom: 0.8rem;
-  }
-
-  h2 {
-    padding-bottom: 0.8rem;
   }
 
   p {
@@ -136,7 +141,7 @@
   font-size: 1rem;
   max-height: calc(100vh - 100px);
   padding: 2em;
-  width: 100px;
+  // width: 100px;
 
   h2 {
     text-decoration: underline;
@@ -160,12 +165,22 @@
 pre {
   position: relative;
   padding: 1em;
+  padding-top: 3em;
   border-radius: 8px;
-  &:after {
+  max-width: 100%;
+  overflow-x: auto;
+
+  &:before {
     content: attr(data-lang);
     position: absolute;
-    padding: 4px 16px;
-    right: 0px;
+    padding: 4px 8px;
+    left: 0px;
     top: 0px;
+    background: var(--accent-background);
+    border-radius: 8px;
+  }
+
+  @media screen and (max-width: $small-screen) {
+    font-size: 1rem;
   }
 }
