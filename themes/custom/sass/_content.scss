@@ -38,19 +38,19 @@
     p {
       margin: 0;
     }
+  }
+}
 
-    .page-stats {
-      display: flex;
-      column-gap: 1em;
-      font-size: 0.8em;
-      flex-wrap: wrap;
+.page-stats {
+  display: flex;
+  column-gap: 1em;
+  font-size: 0.8em;
+  flex-wrap: wrap;
 
-      &>li {
-        display: flex;
-        column-gap: 1em;
-        align-items: center;
-      }
-    }
+  &>li {
+    display: flex;
+    column-gap: 1em;
+    align-items: center;
   }
 }
 

@@ -1,40 +1,38 @@
 {% extends "index.html" %}
 
-
 {% block content %}
-    <h1>{{ page.title }}</h1>
-    {{ page.content | safe }}
+    <div class="spacer"></div>
+
+    <div class="page">
+        {% include "header.html" %}
+
+        <h1>{{ page.title }}</h1>
+
+        <ul class="page-stats">
+            <li>
+                <span>{{ page.date }}</span>
+                <span>{{ page.reading_time }} minute read </span>
+                <span>({{ page.word_count }} words)</span>
+            </li>
+            <li>
+                <ul class="tags">
+                    {% for taxo_kind, taxo_names in page.taxonomies %}
+                    {% set taxonomy_config = get_taxonomy(kind=taxo_kind) %}
+                    {% for taxo_name in taxo_names %}
+                    <li>
+                        <a class="tag" href="{{ get_taxonomy_url(kind=taxo_kind, name=taxo_name) }}">
+                            #{{ taxo_name }}
+                        </a>
+                    </li>
+                    {%endfor%}
+                    {% endfor%}
+                </ul>
+            </li>
+        </ul>
+
+        {{ page.content | safe }}
+    </div>
+
+    <div class="spacer"> </div>
+
 {% endblock content %}
-
-{% block prev_link %}
-    {% if page.smaller %}
-        <a class="previous" href="{{ page.smaller.permalink }}"><</a>
-    {% else %}
-        {# No page before, find the link for the section it's in if there is one #}
-        {% set parent = get_section(path=page.ancestors | reverse | first) %}
-        <a class="previous" href="{{ parent.permalink }}"><</a>
-    {% endif %}
-{% endblock prev_link %}
-
-{% block next_link %}
-    {% if page.higher %}
-        <a class="next" href="{{ page.higher.permalink }}">></a>
-    {% else %}
-        {# No page after, find the link for the following section #}
-        {% set index = get_section(path="_index.md") %}
-        {% set found_current = false %}
-        {% for s in index.subsections %}
-            {% set subsection = get_section(path=s) %}
-            {% if found_current %}
-                <a class="next" href="{{ subsection.permalink }}">></a>
-                {# no break #}
-                {% set_global found_current = false %}
-            {% endif %}
-            {% for p in subsection.pages %}
-                {% if p.permalink == page.permalink %}
-                    {% set_global found_current = true %}
-                {% endif %}
-            {% endfor %}
-        {% endfor %}
-    {% endif %}
-{% endblock next_link %}
