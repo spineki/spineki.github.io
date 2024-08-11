@@ -62,7 +62,7 @@ class ColorSchemePicker extends HTMLElement {
         this.prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 
         // Checking the user already did choose a custom theme.
-        const currentTheme = localStorage.getItem("theme");
+        let currentTheme = localStorage.getItem("theme");
         if (currentTheme === null) {
             // Fallback to preference.
             if (this.prefersDarkScheme.matches) {
