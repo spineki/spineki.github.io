@@ -6,7 +6,8 @@
     <div class="page">
         {% include "header.html" %}
 
-        <h1>{{taxonomy.name}}: {{term.name}}</h1>
+        {% set current_taxonomy = get_taxonomy(kind=taxonomy.name) %}
+        <h1><a href="{{ current_taxonomy.permalink}}">{{taxonomy.name}}</a>: {{term.name}}</h1>
 
         <div class="pages-preview">
             {% for page in term.pages %}

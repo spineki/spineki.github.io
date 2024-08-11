@@ -8,11 +8,13 @@
 
         <h1>{{taxonomy.name}}</h1>
 
-        {% for term in terms%}
-            <h2>
-                <a href="{{ term.path }}">#{{term.name}}</a>
-            </h2>
-        {% endfor %}
+        <ul class="tags">
+            {% for term in terms%}
+                <li class="tag">
+                    <a href="{{ term.path }}">{{term.name}}</a>
+                </li>
+            {% endfor %}
+        </ul>
     </div>
 
     <div class="spacer"> </div>
