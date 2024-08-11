@@ -1,6 +1,6 @@
 .main-content {
   display: flex;
-
+  justify-content: center;
   width: 100%;
 }
 
@@ -166,4 +166,11 @@
       }
     }
   }
+}
+
+@media (max-width: 1200px) {
+  .spacer {
+    display: none
+  }
+
 }
