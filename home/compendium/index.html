@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+    <!-- Enable responsiveness on mobile devices-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="color-scheme" content="dark light">
+
+    <title>Compendium</title>
+
+    
+        <!-- Theme picker -->
+        <script type="text/javascript" src="https://spineki.github.io/theme_picker.js"></script>
+        <!-- Search bar -->
+        <script type="text/javascript" src="https://spineki.github.io/elasticlunr.min.js"></script>
+        <script type="text/javascript" src="https://spineki.github.io/search.js"></script>
+        <!-- Math rendering -->
+        <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
+        <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+        </script>
+        <!-- Add copy button to pre blocks -->
+        <script type="text/javascript" src="https://spineki.github.io/copy_button.js" defer></script>
+    
+
+    <!-- CSS -->
+    
+    <link rel="stylesheet" href="https://spineki.github.io/book.css">
+    
+
+
+    
+    
+</head>
+
+<body>
+    <div class="main-content">
+        
+    <div class="spacer"></div>
+
+    <div class="page">
+        <div class="nav-top">
+    <nav class="nav-content" role="navigation">
+        <ul>
+            <li>
+                <a href="/"> Home </a>
+            </li>
+            <li>
+                <div class="search-container">
+                    <input id="search" type="search" placeholder="Search..." value="">
+                    <div class="search-results">
+                        <ul class="search-results__items"></ul>
+                    </div>
+                </div>
+            </li>
+            <li class="filler"></li>
+            <li>
+                <color-scheme-picker></color-theme-picker>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+        <h1>Compendium</h1>
+
+        <ul class="page-stats">
+            <li>
+                <span>2024-08-10</span>
+                <span>2 minute read </span>
+                <span>(368 words)</span>
+            </li>
+            <li>
+                <ul class="tags">
+                    
+                    
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/math/">
+                            #math
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/c/">
+                            #c++
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/rust/">
+                            #rust
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+            </li>
+        </ul>
+
+        <div class="markdown-container">
+            <p>This post is a kind of reminder made by a student who was tired of discovering interesting sites and forgetting them so soon.</p>
+
+            <p>So, why not put everything in one place?</p>
+<h2 id="mathematics">Mathematics</h2>
+<ul>
+<li>To get a list of remarkable integer sequences: <a href="https://oeis.org/">OEIS</a>. This can be useful if you know the first terms of a suit to quickly check if a corresponding formula exists.</li>
+<li>To learn how to be able to type math with latex faster than one could imagine: <a href="https://castel.dev/post/lecture-notes-1/">How I'm able to take notes in mathematics lectures using LaTeX and Vim</a></li>
+<li>To understand how fluid simulation works, with mathematical explanations and equations (finally!) applied to WebGL <a href="https://jamie-wong.com/2016/08/05/webgl-fluid-simulation/">Fluid Simulation</a></li>
+</ul>
+<h2 id="programming">Programming</h2>
+<h3 id="algorithms">Algorithms</h3>
+<ul>
+<li>To get a list of common NP algorithms, with state-of-the_art information : <a href="https://www.csc.kth.se/tcs/compendium/">the viggo compendium</a>.</li>
+<li>To get a list of common programming patterns used in Video Games but helpful in "regular" codes: <a href="https://gameprogrammingpatterns.com/">Game Programming Patterns</a></li>
+</ul>
+<h3 id="c">C++</h3>
+<ul>
+<li>To learn C++, <a href="https://www.learncpp.com/">learncpp</a> is a beautiful website, with modern cpp practices and in-depth explanations.</li>
+</ul>
+<h3 id="rust">Rust</h3>
+<ul>
+<li>
+<p>The book, the holly bible to learn and understand Rust: <a href="https://doc.rust-lang.org/book/">The Book</a></p>
+</li>
+<li>
+<p>The rustonomicon, the evil bible to learn and understand unsafe Rust: <a href="https://doc.rust-lang.org/nomicon/">The Nomicon</a></p>
+</li>
+<li>
+<p>An online playground to test and run Rust code without installing anything: <a href="https://play.rust-lang.org/">The Playground</a></p>
+</li>
+<li>
+<p>An insightful blog about programming, that dives deep into the Rust language with a readable dialog-like style: <a href="https://fasterthanli.me/">FasterthanLime</a></p>
+</li>
+</ul>
+<h3 id="gpu">GPU</h3>
+<ul>
+<li>To understand and code your own ray-tracer engine step by step: <a href="https://raytracing.github.io/books/RayTracingInOneWeekend.html">Ray Tracing In One Weekend</a>. The project is written in C++, but can easily be written in the language you love the most. With this experience, it is easier to do the same with shaders on a GPU.</li>
+<li>To get a grasp on fragment shader uses for image creation and simulation: <a href="https://thebookofshaders.com/">The Book Of Shaders</a>.</li>
+<li>To test your shader in an already set-up environment or look at others people shaders: <a href="https://www.shadertoy.com">Shader Toy</a></li>
+</ul>
+<h3 id="hdl">HDL</h3>
+<ul>
+<li>To learn verilog, <a href="https://hdlbits.01xz.net/wiki/Main_Page">HDLBits</a> provides exercices from simple warm-ups to complex chip structures.</li>
+<li>Additional documentation can be found on <a href="https://www.chipverify.com/">Chipverify</a>.</li>
+</ul>
+<h3 id="booth-encoding">Booth encoding</h3>
+<p>WIP
+<a href="/booth/index.html">Booth encoding webpage</a></p>
+
+        </div>
+    </div>
+
+    
+        <div class="toc spacer">
+            <ul>
+                <h2>Content</h2>
+                
+                <li>
+                    <a href="https://spineki.github.io/home/compendium/#mathematics">Mathematics</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/home/compendium/#programming">Programming</a>
+                </li>
+                
+            </ul>
+        </div>
+    
+
+    </div>
+</body>
+
+</html>
