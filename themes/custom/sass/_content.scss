@@ -7,6 +7,7 @@
 .spacer {
   flex: 0.5;
   display: none;
+
   @media screen and (min-width: $large-screen) {
     display: flex;
   }
@@ -35,7 +36,8 @@
     padding: 2rem 6rem;
   }
 
-  h1, h2 {
+  h1,
+  h2 {
     padding-bottom: 0.8rem;
     text-wrap: balance;
   }
@@ -53,7 +55,9 @@
 }
 
 .markdown-container {
-  h2, h3 {
+
+  h2,
+  h3 {
     font-weight: 700;
     text-wrap: balance;
     padding-bottom: 0.4rem;
@@ -68,11 +72,13 @@
   }
 
   li {
-    list-style-type:disc;
+    list-style-type: disc;
+
     p {
       margin-bottom: 0.5rem;
     }
   }
+
   a {
     color: var(--accent-color);
     text-decoration: none;
@@ -170,6 +176,11 @@ pre {
   max-width: 100%;
   overflow-x: auto;
 
+  // fixing incorrect line number padding
+  code table tbody tr>td {
+    padding-right: 8px;
+  }
+
   &:before {
     content: attr(data-lang);
     position: absolute;
@@ -178,6 +189,30 @@ pre {
     top: 0px;
     background: var(--accent-background);
     border-radius: 8px;
+  }
+
+  button {
+    display: flex;
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    width: 2em;
+    height: 2em;
+    border-radius: 8px;
+    border: none;
+    opacity: 0%;
+    cursor: pointer;
+
+    &:active {
+      background-color: var(--accent-color);
+    }
+  }
+
+  &:hover {
+    button {
+      transition: 0.3s;
+      opacity: 100%;
+    }
   }
 
   @media screen and (max-width: $small-screen) {
