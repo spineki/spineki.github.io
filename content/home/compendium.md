@@ -4,7 +4,7 @@ description = "This post is a kind of reminder made by a student who was tired o
 date = 2024-08-10
 
 [taxonomies]
-language = ["math", "c++", "rust"]
+tag = ["math", "c++", "rust"]
 +++
 
 So, why not put everything in one place?

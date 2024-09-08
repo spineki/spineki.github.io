@@ -11,7 +11,7 @@ theme = "custom"
 
 title = "Compendium"
 
-taxonomies = [{name = "language"}]
+taxonomies = [{name = "tag"}]
 
 [markdown]
 highlight_code = true
