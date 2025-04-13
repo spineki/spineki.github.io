@@ -133,7 +133,7 @@
 .tags {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 1em;
+  column-gap: 0.5em;
 
   .tag {
     color: var(--accent-color);
@@ -226,4 +226,11 @@ pre {
 
 blockquote {
   margin: 1em;
+}
+
+:not(pre) > code {
+  color: var(--accent-color);
+  background: var(--accent-background);
+  padding: 0.2em 0.3em;
+  border-radius: 8px;
 }
