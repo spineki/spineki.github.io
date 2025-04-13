@@ -9,14 +9,14 @@ tag = ["c++", "rust", "common lisp", "iterator", "closure"]
 
 ## TL;DR
 
-- It is possible to use closures to mimic iterators inC++.
+- It is possible to use closures to mimic iterators in C++.
 - The syntax is concise, and focus on the logic rather than on the usual boilerplate.
 - However, a little bit of one-time plumbing is required to get it to work with regular
 iterators and range-based loops.
 - Since this methods requires a Sentinel as an `iterable::end()` value, it is not directly compatible with `C++17` `std::algorithms`.
 - However, this issue vanishes with C++20 ranges algorithm.
 
-### Prerequisites:
+## Prerequisites:
 
 The following post expects the user to be familiar with `C++17` and iterators.
 
@@ -293,7 +293,7 @@ bool operator!=(const Sentinel &) const {
 }
 ```
 
-> Note: the operator!= is not really required if the iterator is just used as glorified pointer. (just ++ and \*). But it will come handy while create iterables in the next section.
+> Note: the operator!= is not really required if the iterator is just used as glorified pointer. (just ++ and \*). But it will come handy while creating iterables in the next section.
 
 Let's add a nice helper function to ease [type deduction](https://en.cppreference.com/w/cpp/language/class_template_argument_deduction) and provide a simpler name.
 
@@ -542,7 +542,7 @@ In really, what we created is not a true iterable. It's is something which looks
 
 So instead of pretending we have an iterable, we "just" have to creat a range.
 
-#### Custom Ranges
+### Custom Ranges
 
 We already did most of the work for this. However, ranges have more requirements.
 
