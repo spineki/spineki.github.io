@@ -9,15 +9,16 @@ tag = ["c++", "rust", "common lisp", "iterator", "closure"]
 
 ## TL;DR
 
-- It is possible to use closures to mimic iterators in C++.
-- The syntax is concise, and focus on the logic rather than the usual boilerplate.
-- However, a little bit of one-time plumbing is required to get it to work with regular C++ iterators and range-based loops.
-- Since this methods requires a Sentinel as a iterable::end() value, it is not directly compatible with C++17 std::algorithms.
+- It is possible to use closures to mimic iterators inC++.
+- The syntax is concise, and focus on the logic rather than on the usual boilerplate.
+- However, a little bit of one-time plumbing is required to get it to work with regular
+iterators and range-based loops.
+- Since this methods requires a Sentinel as an `iterable::end()` value, it is not directly compatible with `C++17` `std::algorithms`.
 - However, this issue vanishes with C++20 ranges algorithm.
 
 ### Prerequisites:
 
-The following post expects the user to be familiar with C++17 and iterators.
+The following post expects the user to be familiar with `C++17` and iterators.
 
 ## Introduction
 
@@ -25,17 +26,19 @@ In my work, I often have to deal with iterators to go through data structures wh
 
 However, writing a 30-line-of-code struct everytime I want to emulate something which can be done with one `yield` in python is really cumbersome and time consuming. I want to focus on the logic, not on the scaffolding.
 
-But in the end, what is an iterator? It is just something which
+But in the end, what is an iterator? It is just something which:
 
 - can step : `operator++`
-- can return the pointed value : `operator*`
+- can return the pointed value: `operator*`
 - can be compared to detect the end of iteration: `operator!=`
 
-Thus, the struct/class is need to store the inner mutable state pointing to the correct element. While reading the book ["On Lisp", by Paul Graham](https://paulgraham.com/onlisp.html) I was amazed by the way he uses closure capability to maintain an internal mutable state.
+Thus, the struct/class needs an inner mutable state pointing to the correct element.
 
-Even if we can't emulate the full glory of common lisp closures, we can still have [lambdas](https://en.cppreference.com/w/cpp/language/lambda) in C++ since C++11.
+While reading the book ["On Lisp", by Paul Graham](https://paulgraham.com/onlisp.html) I was amazed by the way he uses closures capability to maintain an internal mutable state.
 
-## 1...2...3... Mom, I can count!
+Even if we can't emulate the full glory of common lisp's closures, we can still have [lambdas](https://en.cppreference.com/w/cpp/language/lambda) in C++ since C++11.
+
+## 1... 2... 3... Mom, I can count!
 
 Let's try to use a closure to increase a counter.
 [Godbolt](<https://godbolt.org/#g:!((g:!((g:!((h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:14,endLineNumber:16,positionColumn:14,positionLineNumber:16,selectionStartColumn:14,selectionStartLineNumber:16,startColumn:14,startLineNumber:16),source:'%23include+%3Ciostream%3E%0A%0Aint+main()+%7B%0A++++auto+closure+%3D+%5Bcounter+%3D+0%5D()+mutable+%7B%0A++++++++//+Could+be+even+simpler+with%0A++++++++//+return+counter%2B%2B%3B%0A%0A++++++++%2B%2Bcounter%3B%0A++++++++return+counter%3B%0A++++%7D%3B%0A%0A++++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A%0A++++return+0%3B%0A%7D'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:50.997203335578966,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g114,filters:(b:'0',binary:'1',binaryObject:'1',commentOnly:'0',debugCalls:'1',demangle:'0',directives:'0',execute:'1',intel:'0',libraryCode:'0',trim:'1',verboseDemangling:'0'),flagsViewOpen:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-Wall+-O3',overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:'5',n:'0',o:'+x86-64+gcc+11.4+(Editor+%231)',t:'0')),k:49.002796664421034,l:'4',m:50,n:'0',o:'',s:0,t:'0'),(g:!((h:executor,i:(argsPanelShown:'1',compilationPanelShown:'0',compiler:g114,compilerName:'',compilerOutShown:'0',execArgs:'',execStdin:'',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-Wall+-O3',overrides:!(),runtimeTools:!(),source:1,stdinPanelShown:'1',tree:0,wrap:'1'),l:'5',n:'0',o:'Executor+x86-64+gcc+11.4+(C%2B%2B,+Editor+%231)',t:'0')),header:(),l:'4',m:50,n:'0',o:'',s:0,t:'0')),k:49.002796664421034,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4>)
@@ -66,7 +69,7 @@ int main() {
 ```
 
 Simple but effective. The closure's state updates every time we call it.
-Note: the mutable keyword is required to update the captured counter variable, which is read-only by default.
+> Note: the `mutable` keyword is required in order to update the captured counter variable, which is `read-only` by default.
 
 ## Indexing using a lambda
 
@@ -107,9 +110,9 @@ Nice! So we were able to recreate, more-or-less, the equivalent of `operator++ a
 
 ## One step too far
 
-Not so fast. We stopped calling the previous closure just in time, but we would get anout-of-boud error if we were to call it once more. We need a built-in way to detect the end of iteration.
+Not so fast. We stopped calling the previous closure just in time, but we would get an out-of-bound error if we were to call it once more. We need a built-in way to detect the end of iteration.
 
-We can get some inspiration from other languages, like Rust. In rust, an iterator is just something that must implement the [next()](https://doc.rust-lang.org/std/iter/trait.Iterator.html#tymethod.next) function
+We can get some inspiration from other languages, like Rust. In Rust, an iterator is just something that must implement the [next()](https://doc.rust-lang.org/std/iter/trait.Iterator.html#tymethod.next) function
 
 ```rust
 fn next(&mut self) -> Option<Self::Item>
@@ -119,9 +122,9 @@ Some(value) allows to get the current pointed value,
 None means end of iteration.
 
 I love Rust iterators, so I will try to do something similar.
-Thankfully, since C++17, we have optionals in the standard library including `#include <optional>`.
+Thankfully, since C++17, we can have optionals in the standard library including `#include <optional>`.
 
-> Note: you may want to avoid optional if you ~don't like working with them~ already work with pointers, or if you want to work with refs and you do not want to deal with `std::reference_wrapper`. In this case, you can totally adapt this post, using nullptr for end of iteration and non-null pointers for regular value. It is pretty much straightforward and would result in removing the is_optional related code in the following section.
+> Note: you may want to avoid optional if you ~don't like working with them~ already work with pointers, or if you want to work with refs and you do not want to deal with `std::reference_wrapper`. In this case, you can totally adapt this post, using nullptr for end of iteration and non-null pointers for regular value. It is pretty much straightforward and would result in removing the `is_optional`-related code in the following section.
 
 ```cpp
 #include <iostream>
@@ -152,14 +155,14 @@ int main() {
 30
 ```
 
-Great! So now our closure starts to really act as a mix between and iterable and an iterator.
+Great! So now our closure starts to really act as a mix between an iterator and an iterable.
 Life is good, life is great. So are we done?
 
-## Keeping up with CPP expectations.
+##  C++ expectations.
 
 We were able to iterate on the closure using a [while loop with a declaration condition](https://en.cppreference.com/w/cpp/language/while) in previous section.
 
-However, we cannot do the same on [range-based for loop](https://en.cppreference.com/w/cpp/language/range-for) since it roughly does
+However, we cannot do the same on [range-based for loops](https://en.cppreference.com/w/cpp/language/range-for) since it roughly does
 
 ```cpp
 {
@@ -178,11 +181,11 @@ However, we cannot do the same on [range-based for loop](https://en.cppreference
 }
 ```
 
-We thus need a way to adapt our closure interface into a c++ iterable one.
+We thus need a way to adapt our closure interface into a c++ iterable.
 
-### Plumbing time!
+## Plumbing time!
 
-#### Iterator
+### Iterator
 
 Let's start by wrapping our closure into an iterator.
 To begin with, we write a type facility to check if a provided value is an optional.
@@ -324,7 +327,7 @@ int main() {
 
 Hurrah! Thankfully, creating an iterable from this iterator is way easier.
 
-#### Iterable
+### Iterable
 
 An iterator should offer two basic functions.
 
@@ -495,7 +498,7 @@ int main() {
 
 </details>
 
-### Sorry, I may have lied...
+## Sorry, I may have lied...
 
 If you follow this and try to use the previous iterable with some fancy functional-like STL algorithms from `#include<algorithm>`, you may encounter some compilation errors.
 
