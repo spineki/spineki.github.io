@@ -42,101 +42,105 @@ const moon_svg = `
 `;
 const moon_svg_64 = `data:image/svg+xml;base64,${window.btoa(moon_svg)}`;
 
-
 /**
  * A Picker between dark and light mode
  */
 class ColorSchemePicker extends HTMLElement {
+  /**
+   * The class constructor object
+   */
+  constructor() {
+    // Always call super first in constructor
+    super();
+
     /**
-     * The class constructor object
-    */
-    constructor() {
-        // Always call super first in constructor
-        super();
+     * Handling color scheme choice.
+     * Courtesy: https://css-tricks.com/a-complete-guide-to-dark-mode-on-the-web/#combining
+     * */
+    // User preferences
+    this.prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 
-        /**
-         * Handling color scheme choice.
-         * Courtesy: https://css-tricks.com/a-complete-guide-to-dark-mode-on-the-web/#combining
-         * */
-        // User preferences
-        this.prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+    // Checking the user already did choose a custom theme.
+    let currentTheme = localStorage.getItem("theme");
 
-        // Checking the user already did choose a custom theme.
-        let currentTheme = localStorage.getItem("theme");
-        if (currentTheme === null) {
-            // Fallback to preference.
-            if (this.prefersDarkScheme.matches) {
-                currentTheme = "dark";
-            } else {
-                currentTheme = "light";
-            }
-            localStorage.setItem("theme", currentTheme);
-        }
-
-        if (currentTheme == "dark") {
-            document.documentElement.classList.add("dark-theme");
-        }
-
-        this.addEventListener('click', () => {
-            document.documentElement.classList.toggle("dark-theme");
-            const theme = document.documentElement.classList.contains("dark-theme")
-                ? "dark"
-                : "light";
-            localStorage.setItem("theme", theme);
-        });
+    if (currentTheme === null) {
+      // Fallback to preference.
+      if (this.prefersDarkScheme.matches) {
+        currentTheme = "dark";
+      } else {
+        currentTheme = "light";
+      }
+      alert("setItem theme " + currentTheme);
+      localStorage.setItem("theme", currentTheme);
     }
 
-    /**
-     * Runs each time the element is appended to or moved in the DOM
-    */
-    connectedCallback() {
-        const themePicker = document.createElement("div");
-        themePicker.setAttribute("class", "theme-picker");
+    if (currentTheme == "dark") {
+      document.documentElement.classList.add("dark-theme");
+    }
 
-        /* Clouds */
-        const cloudsContainer = document.createElement('div');
-        cloudsContainer.setAttribute('class', 'clouds-container')
+    this.addEventListener("click", () => {
+      document.documentElement.classList.toggle("dark-theme");
+      const theme = document.documentElement.classList.contains("dark-theme")
+        ? "dark"
+        : "light";
+      localStorage.setItem("theme", theme);
+    });
+  }
 
-        const cloudStyles = [
-            'top: 10px; left: calc(60% + 7px)',
-            'top: 10px; left: calc(60% + 7px)',
-            'top: 10px; left: calc(60% + 12px)',
-            'top: 13px; left: calc(60% + 5px)',
-            'top: 13px; left: calc(60% + 10px)',
-            'top: 13px; left: calc(60% + 15px)',
-            'top: 20px; left: calc(50%)',
-            'top: 20px; left: calc(50% + 5px)',
-            'top: 23px; left: calc(50% - 2px)',
-            'top: 23px; left: calc(50% + 3px)',
-            'top: 23px; left: calc(50% + 8px)'
-        ];
-        for (const cloudStyle of cloudStyles) {
-            const cloud = document.createElement('div');
-            cloud.setAttribute("class", "dot");
-            cloud.setAttribute('style', `background: white; width: 10px; height: 10px; ${cloudStyle}`)
-            cloudsContainer.appendChild(cloud);
-        }
+  /**
+   * Runs each time the element is appended to or moved in the DOM
+   */
+  connectedCallback() {
+    const themePicker = document.createElement("div");
+    themePicker.setAttribute("class", "theme-picker");
 
-        /* Stars */
-        const starsContainer = document.createElement('div');
-        starsContainer.setAttribute('class', 'stars-container')
+    /* Clouds */
+    const cloudsContainer = document.createElement("div");
+    cloudsContainer.setAttribute("class", "clouds-container");
 
-        const starStyles = [
-            'background: gray; width: 5px; height: 5px; top: 5px; left: 10px;',
-            'background: color-mix(in srgb, gray, white); width: 10px; height: 10px; top: 10px; left: 30px;',
-            'background: white; width: 1px; height: 1px; top: 25px; left: 25px;',
-            'background: white; width: 5px; height: 5px; top: 30px; left: 10px;',
-            'background: yellow; width: 3px; height: 3px; top: 32px; left: 40px;'
-        ];
-        for (const starStyle of starStyles) {
-            const star = document.createElement('div');
-            star.setAttribute("class", "dot");
-            star.setAttribute('style', starStyle)
-            starsContainer.appendChild(star);
-        }
+    const cloudStyles = [
+      "top: 10px; left: calc(60% + 7px)",
+      "top: 10px; left: calc(60% + 7px)",
+      "top: 10px; left: calc(60% + 12px)",
+      "top: 13px; left: calc(60% + 5px)",
+      "top: 13px; left: calc(60% + 10px)",
+      "top: 13px; left: calc(60% + 15px)",
+      "top: 20px; left: calc(50%)",
+      "top: 20px; left: calc(50% + 5px)",
+      "top: 23px; left: calc(50% - 2px)",
+      "top: 23px; left: calc(50% + 3px)",
+      "top: 23px; left: calc(50% + 8px)",
+    ];
+    for (const cloudStyle of cloudStyles) {
+      const cloud = document.createElement("div");
+      cloud.setAttribute("class", "dot");
+      cloud.setAttribute(
+        "style",
+        `background: white; width: 10px; height: 10px; ${cloudStyle}`,
+      );
+      cloudsContainer.appendChild(cloud);
+    }
 
-        const style = document.createElement('style');
-        style.textContent = `
+    /* Stars */
+    const starsContainer = document.createElement("div");
+    starsContainer.setAttribute("class", "stars-container");
+
+    const starStyles = [
+      "background: gray; width: 5px; height: 5px; top: 5px; left: 10px;",
+      "background: color-mix(in srgb, gray, white); width: 10px; height: 10px; top: 10px; left: 30px;",
+      "background: white; width: 1px; height: 1px; top: 25px; left: 25px;",
+      "background: white; width: 5px; height: 5px; top: 30px; left: 10px;",
+      "background: yellow; width: 3px; height: 3px; top: 32px; left: 40px;",
+    ];
+    for (const starStyle of starStyles) {
+      const star = document.createElement("div");
+      star.setAttribute("class", "dot");
+      star.setAttribute("style", starStyle);
+      starsContainer.appendChild(star);
+    }
+
+    const style = document.createElement("style");
+    style.textContent = `
             .theme-picker {
                 scale: 0.7;
                 height: 3rem;
@@ -213,29 +217,27 @@ class ColorSchemePicker extends HTMLElement {
             }
         `;
 
-        this.appendChild(style);
-        this.appendChild(themePicker);
-        themePicker.appendChild(cloudsContainer);
-        themePicker.appendChild(starsContainer);
-    }
+    this.appendChild(style);
+    this.appendChild(themePicker);
+    themePicker.appendChild(cloudsContainer);
+    themePicker.appendChild(starsContainer);
+  }
 
-    attributeChangedCallback(name, oldValue, newValue) {
-        if (name == "theme") {
-
-        }
-        print("attribute changed", name)
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name == "theme") {
     }
+    print("attribute changed", name);
+  }
 
-    /**
-     * Runs when the element is removed from the DOM
-    */
-    disconnectedCallback() {
-        console.log('disconnected', this);
-    }
+  /**
+   * Runs when the element is removed from the DOM
+   */
+  disconnectedCallback() {
+    console.log("disconnected", this);
+  }
 }
 
-
 // Define the new web component
-if ('customElements' in window) {
-    customElements.define('color-scheme-picker', ColorSchemePicker);
+if ("customElements" in window) {
+  customElements.define("color-scheme-picker", ColorSchemePicker);
 }
