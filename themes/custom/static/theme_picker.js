@@ -53,31 +53,6 @@ class ColorSchemePicker extends HTMLElement {
     // Always call super first in constructor
     super();
 
-    /**
-     * Handling color scheme choice.
-     * Courtesy: https://css-tricks.com/a-complete-guide-to-dark-mode-on-the-web/#combining
-     * */
-    // User preferences
-    this.prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
-
-    // Checking the user already did choose a custom theme.
-    let currentTheme = localStorage.getItem("theme");
-
-    if (currentTheme === null) {
-      // Fallback to preference.
-      if (this.prefersDarkScheme.matches) {
-        currentTheme = "dark";
-      } else {
-        currentTheme = "light";
-      }
-      alert("setItem theme " + currentTheme);
-      localStorage.setItem("theme", currentTheme);
-    }
-
-    if (currentTheme == "dark") {
-      document.documentElement.classList.add("dark-theme");
-    }
-
     this.addEventListener("click", () => {
       document.documentElement.classList.toggle("dark-theme");
       const theme = document.documentElement.classList.contains("dark-theme")

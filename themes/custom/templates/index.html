@@ -2,6 +2,32 @@
 <html lang="en">
 
 <head>
+    <script>
+      // Handling user preferred theme here to get rid of flickering.
+
+      /**
+      * Handling color scheme choice.
+      * Courtesy: https://css-tricks.com/a-complete-guide-to-dark-mode-on-the-web/#combining
+      * */
+
+      // Checking the user already did choose a custom theme.
+      let currentTheme = localStorage.getItem("theme");
+
+      if (currentTheme === null) {
+        // User preferences
+        const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+        if (prefersDarkScheme.matches) {
+          currentTheme = "dark";
+        } else {
+          currentTheme = "light";
+        }
+        localStorage.setItem("theme", currentTheme);
+      }
+      if (currentTheme === "dark") {
+        document.documentElement.classList.add("dark-theme");
+      }
+    </script>
+
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
 
@@ -30,7 +56,6 @@
     {% block css %}
     <link rel="stylesheet" href="{{ get_url(path="book.css") | safe }}">
     {% endblock css %}
-
 
     {% block extra_head %}
     {% endblock extra_head %}
