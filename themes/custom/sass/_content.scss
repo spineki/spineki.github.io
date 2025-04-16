@@ -70,11 +70,12 @@
     padding-top: 1.5rem;
   }
 
-  ul li {
-    &::before {
-      content: "– ";
+  ul {
+    margin-left: 1rem;
+    li {
+      list-style-type: "– ";
+      padding-bottom: 0.5em;
     }
-    padding-bottom: 0.5em;
   }
 
   li {
@@ -231,6 +232,6 @@ blockquote {
 :not(pre) > code {
   color: var(--accent-color);
   background: var(--accent-background);
-  padding: 0.2em 0.3em;
+  padding: 0.1em 0.3em;
   border-radius: 8px;
 }
