@@ -14,7 +14,7 @@ tag = ["c++", "rust", "common lisp", "iterator", "closure"]
 - However, a little bit of one-time plumbing is required to get it to work with regular
 iterators and range-based loops.
 - Since this methods requires a Sentinel as an `iterable::end()` value, it is not directly compatible with `C++17` `std::algorithms`.
-- However, this issue vanishes with C++20 ranges algorithm.
+- However, this issue vanishes with `C++20` ranges algorithm.
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ The following post expects the user to be familiar with `C++17` and iterators.
 
 In my work, I often have to deal with iterators to go through data structures while minimizing the number of allocations.
 
-However, writing a 30-line-of-code struct everytime I want to emulate something which can be done with one `yield` in python is really cumbersome and time consuming. I want to focus on the logic, not on the scaffolding.
+However, writing a 30-line-of-code struct everytime I want to emulate something which can be done with one `yield` in Python is really cumbersome and time consuming. I want to focus on the logic, not on the scaffolding.
 
 But in the end, what is an iterator? It is just something which:
 
@@ -538,7 +538,7 @@ Indeed, STL algorithms are expected to provide `begin()` and `end()` of the same
 Fair enough, we just need to add constructor to our Sentinel to implicitly be converted into an `IteratorAdapter<>` and...
 No, this will never work since IteratorAdapter is generic other a lambda, thus its type is unique...
 
-In really, what we created is not a true iterable. It's is something which looks way more like C++20 [ranges](https://en.cppreference.com/w/cpp/ranges)! (And indeed, the Sentinel terminology comes from there). Range do not need both ends to share the same type. They just need to be comparable.
+In really, what we created is not a true iterable. It's is something which looks way more like `C++20` [ranges](https://en.cppreference.com/w/cpp/ranges)! (And indeed, the Sentinel terminology comes from there). Range do not need both ends to share the same type. They just need to be comparable.
 
 So instead of pretending we have an iterable, we "just" have to creat a range.
 
@@ -809,7 +809,7 @@ main:
 
 Since the closure types cannot be named, those ranges are not really meant to be stored as members (even if it's possible using templates). They offer a simple interface for quick-and-use-once iterators, as it is more common in functional languages.
 
-If STL compatibility is needed, the C++20 range interface of the last section is required. But maybe it would be easier to use a more regular `range + view` approach.
+If STL compatibility is needed, the `C++20` range interface of the last section is required. But maybe it would be easier to use a more regular `range + view` approach.
 
 ## Acknowledgements
 
