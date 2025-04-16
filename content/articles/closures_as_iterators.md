@@ -16,7 +16,7 @@ iterators and range-based loops.
 - Since this methods requires a Sentinel as an `iterable::end()` value, it is not directly compatible with `C++17` `std::algorithms`.
 - However, this issue vanishes with C++20 ranges algorithm.
 
-## Prerequisites:
+## Prerequisites
 
 The following post expects the user to be familiar with `C++17` and iterators.
 
@@ -780,7 +780,7 @@ int main() {
 
 </details>
 
-## Afterword:
+## Afterword
 
 The main goal of this post was to present a little framework that could be reused to ease the writing of Iterators in C++ 17/20.
 
@@ -807,9 +807,9 @@ main:
   ret
 ```
 
-Since the closure types cannot be named, those ranges are not really meant to be stored as members (even if it's possible using templates). They offer a simple interface for quick-and-use-once iterators, as it is more frequent in functional languages.
+Since the closure types cannot be named, those ranges are not really meant to be stored as members (even if it's possible using templates). They offer a simple interface for quick-and-use-once iterators, as it is more common in functional languages.
 
-If STL compatibility is needed, the C++20 range interface of the last section is required. But maybe it could be easier to use a more regular `range + view` approach.
+If STL compatibility is needed, the C++20 range interface of the last section is required. But maybe it would be easier to use a more regular `range + view` approach.
 
 ## Acknowledgements
 
