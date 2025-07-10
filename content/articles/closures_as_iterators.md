@@ -538,9 +538,9 @@ Indeed, STL algorithms are expected to provide `begin()` and `end()` of the same
 Fair enough, we just need to add constructor to our Sentinel to implicitly be converted into an `IteratorAdapter<>` and...
 No, this will never work since IteratorAdapter is generic other a lambda, thus its type is unique...
 
-In really, what we created is not a true iterable. It's is something which looks way more like `C++20` [ranges](https://en.cppreference.com/w/cpp/ranges)! (And indeed, the Sentinel terminology comes from there). Range do not need both ends to share the same type. They just need to be comparable.
+In really, what we created is not a true iterable. It is something which looks way more like `C++20` [ranges](https://en.cppreference.com/w/cpp/ranges)! (And indeed, the Sentinel terminology comes from there). Range do not need both ends to share the same type. They just need to be comparable.
 
-So instead of pretending we have an iterable, we "just" have to creat a range.
+So instead of pretending we have an iterable, we "just" have to create a range.
 
 ### Custom Ranges
 
@@ -563,7 +563,7 @@ IteratorAdapter operator++(int)
 template <typename OtherT>
 bool operator==(const OtherT &other) const
 {
-  return !(*this == other);
+  return !(*this != other);
 }
 ```
 
