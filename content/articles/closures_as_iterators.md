@@ -12,7 +12,7 @@ tag = ["c++", "rust", "common lisp", "iterator", "closure"]
 - It is possible to use closures to mimic iterators in C++.
 - The syntax is concise, and focus on the logic rather than on the usual boilerplate.
 - However, a little bit of one-time plumbing is required to get it to work with regular
-iterators and range-based loops.
+  iterators and range-based loops.
 - Since this methods requires a Sentinel as an `iterable::end()` value, it is not directly compatible with `C++17` `std::algorithms`.
 - However, this issue vanishes with `C++20` ranges algorithm.
 
@@ -69,6 +69,7 @@ int main() {
 ```
 
 Simple but effective. The closure's state updates every time we call it.
+
 > Note: the `mutable` keyword is required in order to update the captured counter variable, which is `read-only` by default.
 
 ## Indexing using a lambda
@@ -158,7 +159,7 @@ int main() {
 Great! So now our closure starts to really act as a mix between an iterator and an iterable.
 Life is good, life is great. So are we done?
 
-##  C++ expectations.
+## C++ expectations
 
 We were able to iterate on the closure using a [while loop with a declaration condition](https://en.cppreference.com/w/cpp/language/while) in previous section.
 
@@ -538,9 +539,9 @@ Indeed, STL algorithms are expected to provide `begin()` and `end()` of the same
 Fair enough, we just need to add constructor to our Sentinel to implicitly be converted into an `IteratorAdapter<>` and...
 No, this will never work since IteratorAdapter is generic other a lambda, thus its type is unique...
 
-In really, what we created is not a true iterable. It is something which looks way more like `C++20` [ranges](https://en.cppreference.com/w/cpp/ranges)! (And indeed, the Sentinel terminology comes from there). Range do not need both ends to share the same type. They just need to be comparable.
+In really, what we created is not a true iterable. It's is something which looks way more like `C++20` [ranges](https://en.cppreference.com/w/cpp/ranges)! (And indeed, the Sentinel terminology comes from there). Range do not need both ends to share the same type. They just need to be comparable.
 
-So instead of pretending we have an iterable, we "just" have to create a range.
+So instead of pretending we have an iterable, we "just" have to creat a range.
 
 ### Custom Ranges
 
@@ -785,6 +786,7 @@ int main() {
 The main goal of this post was to present a little framework that could be reused to ease the writing of Iterators in C++ 17/20.
 
 From what I tested, since closures act a syntaxic sugar for anonymous structs, this is a zero-cost abstraction. See the compilation result of
+
 ```cpp
 int main() {
   std::array arr{10, 20, 30};
