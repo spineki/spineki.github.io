@@ -63,9 +63,9 @@ int main() {
 ```
 
 ```console
-0
 1
 2
+3
 ```
 
 Simple but effective. The closure's state updates every time we call it.
@@ -815,4 +815,4 @@ If STL compatibility is needed, the `C++20` range interface of the last section 
 
 ## Acknowledgements
 
-A huge thank you to [Augustin Fabre](https://augfab.dev), who helped me design Adapters' interfaces and sculpt the shapeless idea of closures as iterators.
+A huge thank you to [Augustin Fabre](https://augfab.dev), who helped me design Adapters' interfaces and sculpt the shapeless idea of closures as iterators. Thanks [Ninikiril](https://github.com/Ninikiril) for proofreading and for finding a nasty off-by-one error.
