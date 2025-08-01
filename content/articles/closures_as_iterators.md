@@ -785,7 +785,7 @@ int main() {
 
 The main goal of this post was to present a little framework that could be reused to ease the writing of Iterators in C++ 17/20.
 
-From what I tested, since closures act a syntaxic sugar for anonymous structs, this is a zero-cost abstraction. See the compilation result of
+From what I tested, since closures act as syntactic sugar for anonymous structs, this is a zero-cost abstraction. See the compilation result of
 
 ```cpp
 int main() {
