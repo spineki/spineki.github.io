@@ -98,7 +98,6 @@ But how to tell apart two consecutive identical chunk? Let's do exactly what we 
 The protocol thus becomes :
 
 ```protocol: S side
-
 When R displays a QR code encoding the value N
   show a QR encoding [N + 1, chunk_N+1]
 ```

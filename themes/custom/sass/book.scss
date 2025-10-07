@@ -2,11 +2,6 @@
 
 @import "normalize";
 
-@font-face {
-  font-family: "Montserrat";
-  src: url("Montserrat-Regular.ttf");
-}
-
 * {
   box-sizing: border-box;
 }
@@ -27,19 +22,12 @@ html {
   color: var(--color);
 }
 
-h1,
-h2,
-h3,
-h4 {
-  font-family: "Montserrat", "Roboto", Arial, sans-serif;
-}
-
 body {
   text-rendering: optimizeLegibility;
-  font-family: "Noto Sans", "Roboto", Arial, sans-serif;
-  font-size: 1.35rem;
-  line-height: 1.5em;
-  font-weight: 300;
+  font-family: system-ui, "Noto Sans", "Roboto", Arial, sans-serif;
+  font-size: 1.3rem;
+  line-height: 1.75;
+  font-weight: 400;
   /* letter-spacing: 0.2px; */
   display: flex;
   flex-direction: column;

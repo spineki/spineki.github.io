@@ -240,7 +240,7 @@ private:
 };
 ```
 
-Notice here that we call the closure in the constructor. This way, we initialize properly the current_value state to point to the first value of the iteration. While traditional c++ iterators tend to start at the correct beginning and go one step to far at the end, our closure is one step backward.
+> Notice here that we call the closure in the constructor. This way, we initialize properly the current_value state to point to the first value of the iteration. While traditional c++ iterators tend to start at the correct beginning and go one step to far at the end, our closure is one step backward.
 
 We can now focus on the `operator++`, `operator*`, `operator!=` methods.
 

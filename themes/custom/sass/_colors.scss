@@ -5,14 +5,14 @@ html {
 }
 
 :root {
-  --color: black;
+  --color: hsl(204, 15%, 16%);
   --background: #f7f7f7;
-  --paper-background: #ffffff;
+  --paper-background: hsl(0, 25%, 96.9%);
   --input-color: #313131;
   --input-background: #fafafa;
   --input-border: #b3b3b3;
   --input-focus: #719ece;
-  --accent-color: #dc1be3;
+  --accent-color: hsl(326, 82%, 41%);
   --accent-background: #afb8c133;
   // --gap: 15px;
   // --line-thickness: 1px;
@@ -39,14 +39,14 @@ html {
 }
 
 :root.dark-theme {
-  --color: white;
+  --color: hsl(212, 15%, 85%);
   --background: #111010;
   --paper-background: #1d1c1c;
   --input-color: #f0f0f0;
   --input-background: #454545;
   --input-border: #585858;
   --input-focus: #719ece;
-  --accent-color: #87d4f2;
+  --accent-color: hsl(190, 58%, 43%);
   --accent-background: #afb8c133;
   // --background-color: #242424;
   // --decoration-color: #eee;
