@@ -51,7 +51,23 @@
 }
 
 .markdown-container {
-  h2 h3 h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
+    a {
+      color: var(--color);
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  h2,
+  h3,
+  h4 {
     font-weight: 700;
     text-wrap: balance;
     padding-bottom: 0.4rem;
