@@ -10,11 +10,11 @@ tag = ["c++", "rust", "common lisp", "iterator", "closure"]
 ## TL;DR
 
 - It is possible to use closures to mimic iterators in C++.
-- The syntax is concise, and focus on the logic rather than on the usual boilerplate.
+- The syntax is concise, and focuses on the logic rather than on the usual boilerplate.
 - However, a little bit of one-time plumbing is required to get it to work with regular
   iterators and range-based loops.
-- Since this methods requires a Sentinel as an `iterable::end()` value, it is not directly compatible with `C++17` `std::algorithms`.
-- However, this issue vanishes with `C++20` ranges algorithm.
+- Since this method requires a Sentinel as an `iterable::end()` value, it is not directly compatible with `C++17` `std::algorithms`.
+- However, this issue vanishes with `C++20` ranges algorithms.
 
 ## Prerequisites
 
@@ -24,9 +24,9 @@ The following post expects the user to be familiar with `C++17` and iterators.
 
 In my work, I often have to deal with iterators to go through data structures while minimizing the number of allocations.
 
-However, writing a 30-line-of-code struct everytime I want to emulate something which can be done with one `yield` in Python is really cumbersome and time consuming. I want to focus on the logic, not on the scaffolding.
+However, writing a 30-line struct every time I want to emulate something which can be done with one `yield` in Python is really cumbersome and time-consuming. I want to focus on the logic, not on the scaffolding.
 
-But in the end, what is an iterator? It is just something which:
+But in the end, what is an iterator? It is just something that:
 
 - can step : `operator++`
 - can return the pointed value: `operator*`
@@ -34,9 +34,9 @@ But in the end, what is an iterator? It is just something which:
 
 Thus, the struct/class needs an inner mutable state pointing to the correct element.
 
-While reading the book ["On Lisp", by Paul Graham](https://paulgraham.com/onlisp.html) I was amazed by the way he uses closures capability to maintain an internal mutable state.
+While reading the book ["On Lisp", by Paul Graham](https://paulgraham.com/onlisp.html) I was amazed by the way he uses closures' capability to maintain an internal mutable state.
 
-Even if we can't emulate the full glory of common lisp's closures, we can still have [lambdas](https://en.cppreference.com/w/cpp/language/lambda) in C++ since C++11.
+Even if we can't emulate the full glory of Common Lisp's closures, we’ve had [lambdas](https://en.cppreference.com/w/cpp/language/lambda) in C++ since C++11.
 
 ## 1... 2... 3... Mom, I can count!
 
@@ -68,7 +68,7 @@ int main() {
 3
 ```
 
-Simple but effective. The closure's state updates every time we call it.
+Simple, but effective. The closure's state updates every time we call it.
 
 > Note: the `mutable` keyword is required in order to update the captured counter variable, which is `read-only` by default.
 
@@ -76,7 +76,7 @@ Simple but effective. The closure's state updates every time we call it.
 
 Now that we know how to count, we should be able to index a vector (or any indexable data structure).
 
-For example, We can capture by reference a vector and iterate on it using the previous closure. [Godbolt](<https://godbolt.org/#g:!((g:!((g:!((h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:2,endLineNumber:21,positionColumn:2,positionLineNumber:21,selectionStartColumn:2,selectionStartLineNumber:21,startColumn:2,startLineNumber:21),source:'%23include+%3Ciostream%3E%0A%23include+%3Cvector%3E%0A%0Aint+main()+%7B%0A++std::vector%3Cint%3E+vec%7B10,+20,+30%7D%3B%0A%0A++auto+closure+%3D+%5B%26vec,+counter+%3D+0%5D()+mutable+%7B%0A++++auto+elem+%3D+vec%5Bcounter%5D%3B%0A++++%2B%2Bcounter%3B%0A++++return+elem%3B%0A%0A++++//+Could+be+even+simpler+(but+less+readable)+with%0A++++//+return+vec%5Bcounter%2B%2B%5D%3B%0A++%7D%3B%0A%0A++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A%0A++return+0%3B%0A%7D'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:50.997203335578966,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g114,filters:(b:'0',binary:'1',binaryObject:'1',commentOnly:'0',debugCalls:'1',demangle:'0',directives:'0',execute:'1',intel:'0',libraryCode:'0',trim:'1',verboseDemangling:'0'),flagsViewOpen:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-Wall+-O3',overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:'5',n:'0',o:'+x86-64+gcc+11.4+(Editor+%231)',t:'0')),k:49.002796664421034,l:'4',m:50,n:'0',o:'',s:0,t:'0'),(g:!((h:executor,i:(argsPanelShown:'1',compilationPanelShown:'0',compiler:g114,compilerName:'',compilerOutShown:'0',execArgs:'',execStdin:'',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-Wall+-O3',overrides:!(),runtimeTools:!(),source:1,stdinPanelShown:'1',tree:0,wrap:'1'),l:'5',n:'0',o:'Executor+x86-64+gcc+11.4+(C%2B%2B,+Editor+%231)',t:'0')),header:(),l:'4',m:50,n:'0',o:'',s:0,t:'0')),k:49.002796664421034,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4>)
+For example, we can capture a vector by reference and iterate on it using the previous closure. [Godbolt](<https://godbolt.org/#g:!((g:!((g:!((h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:2,endLineNumber:21,positionColumn:2,positionLineNumber:21,selectionStartColumn:2,selectionStartLineNumber:21,startColumn:2,startLineNumber:21),source:'%23include+%3Ciostream%3E%0A%23include+%3Cvector%3E%0A%0Aint+main()+%7B%0A++std::vector%3Cint%3E+vec%7B10,+20,+30%7D%3B%0A%0A++auto+closure+%3D+%5B%26vec,+counter+%3D+0%5D()+mutable+%7B%0A++++auto+elem+%3D+vec%5Bcounter%5D%3B%0A++++%2B%2Bcounter%3B%0A++++return+elem%3B%0A%0A++++//+Could+be+even+simpler+(but+less+readable)+with%0A++++//+return+vec%5Bcounter%2B%2B%5D%3B%0A++%7D%3B%0A%0A++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A%0A++return+0%3B%0A%7D'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:50.997203335578966,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g114,filters:(b:'0',binary:'1',binaryObject:'1',commentOnly:'0',debugCalls:'1',demangle:'0',directives:'0',execute:'1',intel:'0',libraryCode:'0',trim:'1',verboseDemangling:'0'),flagsViewOpen:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-Wall+-O3',overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:'5',n:'0',o:'+x86-64+gcc+11.4+(Editor+%231)',t:'0')),k:49.002796664421034,l:'4',m:50,n:'0',o:'',s:0,t:'0'),(g:!((h:executor,i:(argsPanelShown:'1',compilationPanelShown:'0',compiler:g114,compilerName:'',compilerOutShown:'0',execArgs:'',execStdin:'',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-Wall+-O3',overrides:!(),runtimeTools:!(),source:1,stdinPanelShown:'1',tree:0,wrap:'1'),l:'5',n:'0',o:'Executor+x86-64+gcc+11.4+(C%2B%2B,+Editor+%231)',t:'0')),header:(),l:'4',m:50,n:'0',o:'',s:0,t:'0')),k:49.002796664421034,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4>)
 
 ```cpp
 #include <iostream>
@@ -107,11 +107,11 @@ int main() {
 30
 ```
 
-Nice! So we were able to recreate, more-or-less, the equivalent of `operator++ and operator*` using a functor.
+Nice! So we were able to re-create, more-or-less, the equivalent of `operator++` and `operator*` using a functor.
 
 ## One step too far
 
-Not so fast. We stopped calling the previous closure just in time, but we would get an out-of-bound error if we were to call it once more. We need a built-in way to detect the end of iteration.
+Not so fast. We stopped calling the previous closure just in time, but we would get an out-of-bounds error if we were to call it once more. We need a built-in way to detect the end of iteration.
 
 We can get some inspiration from other languages, like Rust. In Rust, an iterator is just something that must implement the [next()](https://doc.rust-lang.org/std/iter/trait.Iterator.html#tymethod.next) function
 
@@ -119,13 +119,13 @@ We can get some inspiration from other languages, like Rust. In Rust, an iterato
 fn next(&mut self) -> Option<Self::Item>
 ```
 
-Some(value) allows to get the current pointed value,
-None means end of iteration.
+Some(value) allows retrieving the current pointed value,
+None means the end of iteration.
 
-I love Rust iterators, so I will try to do something similar.
-Thankfully, since C++17, we can have optionals in the standard library including `#include <optional>`.
+I love Rust iterators, so I will try doing something similar.
+Thankfully, since C++17, we can have optionals in the standard library, via `#include <optional>`.
 
-> Note: you may want to avoid optional if you ~don't like working with them~ already work with pointers, or if you want to work with refs and you do not want to deal with `std::reference_wrapper`. In this case, you can totally adapt this post, using nullptr for end of iteration and non-null pointers for regular value. It is pretty much straightforward and would result in removing the `is_optional`-related code in the following section.
+> Note: you may want to avoid optionals if you ~don't like working with them~ already work with pointers, or if you want to work with refs and you do not want to deal with `std::reference_wrapper`. In this case, you can totally adapt this post, using nullptr for the end of iteration and non-null pointers for regular values. It is pretty much straightforward and would result in removing the `is_optional`-related code in the following section.
 
 ```cpp
 #include <iostream>
@@ -157,13 +157,13 @@ int main() {
 ```
 
 Great! So now our closure starts to really act as a mix between an iterator and an iterable.
-Life is good, life is great. So are we done?
+Life is good, life is great. But are we done?
 
 ## C++ expectations
 
-We were able to iterate on the closure using a [while loop with a declaration condition](https://en.cppreference.com/w/cpp/language/while) in previous section.
+We were able to iterate on the closure using a [while loop with a declaration condition](https://en.cppreference.com/w/cpp/language/while) in the previous section.
 
-However, we cannot do the same on [range-based for loops](https://en.cppreference.com/w/cpp/language/range-for) since it roughly does
+However, we cannot do the same with [range-based for loops](https://en.cppreference.com/w/cpp/language/range-for) since it roughly does
 
 ```cpp
 {
@@ -182,15 +182,15 @@ However, we cannot do the same on [range-based for loops](https://en.cppreferenc
 }
 ```
 
-We thus need a way to adapt our closure interface into a c++ iterable.
+We therefore need a way to adapt our closure interface into a C++ iterable.
 
 ## Plumbing time!
 
 ### Iterator
 
 Let's start by wrapping our closure into an iterator.
-To begin with, we write a type facility to check if a provided value is an optional.
-This is not mandatory, but it will allow the code to break early if the provided closure does not return an optional.
+To begin with, we write a type trait to check if a provided value is an optional.
+This is not mandatory, but it will allow the code to break early if the provided closure does not return an `std::optional`.
 
 ```cpp
 #include <type_traits>
@@ -211,7 +211,7 @@ private:
   // to ease typing, get the Optional type returned by the closure...
   using OptReturnT = std::invoke_result_t<ClosureT>;
   // ... and check if it's really an optional!
-  static_assert(is_optional<OptReturnT>());
+  static_assert(is_optional_v<OptReturnT>);
 
 public:
   // Regular iterators flags expected by the STL.
@@ -240,7 +240,7 @@ private:
 };
 ```
 
-> Notice here that we call the closure in the constructor. This way, we initialize properly the current_value state to point to the first value of the iteration. While traditional c++ iterators tend to start at the correct beginning and go one step to far at the end, our closure is one step backward.
+> Notice here that we call the closure in the constructor. This way, we initialize properly the `current_value` state to point to the first value of the iteration. While traditional C++ iterators tend to start at the correct beginning and go one step too far at the end, our closure is one step behind.
 
 We can now focus on the `operator++`, `operator*`, `operator!=` methods.
 
@@ -271,8 +271,8 @@ reference operator*() {
 }
 ```
 
-But what can we do for the `operator!=`? Is there any meaning to comparing our closure-based iterators if it is not to detect the end of iteration?
-Let's fix this philosophical question by dodging it an let us introduce a dedicated struct to reify this end concept.
+But what should we do for the `operator!=`? Is there any meaning to comparing our closure-based iterators if it is not to detect the end of iteration?
+Let's fix this philosophical question by dodging it and let us introduce a dedicated struct to reify this end concept.
 
 ```cpp
 struct Sentinel {};
@@ -294,7 +294,7 @@ bool operator!=(const Sentinel &) const {
 }
 ```
 
-> Note: the operator!= is not really required if the iterator is just used as glorified pointer. (just ++ and \*). But it will come handy while creating iterables in the next section.
+> Note: the operator!= is not really required if the iterator is just used as glorified pointer. (just ++ and \*). But it will come in handy while creating iterables in the next section.
 
 Let's add a nice helper function to ease [type deduction](https://en.cppreference.com/w/cpp/language/class_template_argument_deduction) and provide a simpler name.
 
@@ -330,7 +330,7 @@ Hurrah! Thankfully, creating an iterable from this iterator is way easier.
 
 ### Iterable
 
-An iterator should offer two basic functions.
+An iterator should offer two basic member functions.
 
 - Returning an iterator pointing to the beginning: `begin()`.
 - Returning an iterator pointing past the end: `end()`
@@ -352,7 +352,7 @@ private:
 };
 ```
 
-As for the iterator, let's add a simple wrapper
+As with the iterator, let's add a simple wrapper.
 
 ```cpp
 template <typename ClosureT> auto into_iterable(ClosureT &&closure) {
@@ -382,12 +382,12 @@ int main() {
 30
 ```
 
-We did it! From an end user point-of-view, the required logic is minimal.
+We did it! From an end user's point of view, the required logic is minimal.
 
 Once the adapters are moved into a header, it just boils down to:
 
 1. Define a closure
-2. Wrap it in into_iterable()
+2. Wrap it in `into_iterable()`
 3. ?
 4. Profit
 
@@ -418,7 +418,7 @@ struct Sentinel {};
 template <typename ClosureT> class IteratorAdapter {
 private:
   using OptReturnT = std::invoke_result_t<ClosureT>;
-  static_assert(is_optional<OptReturnT>());
+  static_assert(is_optional_v<OptReturnT>);
 
 public:
   using iterator_category = std::forward_iterator_tag;
@@ -501,7 +501,7 @@ int main() {
 
 ## Sorry, I may have lied...
 
-If you follow this and try to use the previous iterable with some fancy functional-like STL algorithms from `#include<algorithm>`, you may encounter some compilation errors.
+If you follow this and try to use the previous iterable with some fancy functional-like STL algorithms from `#include<algorithm>`, you might encounter compilation errors.
 
 ```cpp
 int main() {
@@ -536,12 +536,12 @@ I
 
 Indeed, STL algorithms are expected to provide `begin()` and `end()` of the same type.
 
-Fair enough, we just need to add constructor to our Sentinel to implicitly be converted into an `IteratorAdapter<>` and...
-No, this will never work since IteratorAdapter is generic other a lambda, thus its type is unique...
+Fair enough, we just need to add a constructor to our Sentinel to implicitly be converted into an `IteratorAdapter<>` and...
+No, this will never work since IteratorAdapter is generic over a lambda, thus its type is unique...
 
-In really, what we created is not a true iterable. It's is something which looks way more like `C++20` [ranges](https://en.cppreference.com/w/cpp/ranges)! (And indeed, the Sentinel terminology comes from there). Range do not need both ends to share the same type. They just need to be comparable.
+In reality, what we created is not a true iterable. It is something which looks way more like `C++20` [ranges](https://en.cppreference.com/w/cpp/ranges)! (And indeed, the Sentinel terminology comes from there). Ranges do not need both ends to share the same type. They just need to be comparable.
 
-So instead of pretending we have an iterable, we "just" have to creat a range.
+So instead of pretending we have an iterable, we "just" have to create a range.
 
 ### Custom Ranges
 
@@ -568,7 +568,7 @@ bool operator==(const OtherT &other) const
 }
 ```
 
-- Move constructor (and so spawns the [rule of 5](https://en.cppreference.com/w/cpp/language/rule_of_three)).
+- Move constructor (which triggers the [rule of 5](https://en.cppreference.com/w/cpp/language/rule_of_three)).
 
 ```cpp
 IteratorAdapter(const IteratorAdapter &) = default;
@@ -588,7 +588,7 @@ IteratorAdapter(const ClosureT &&closure):
 ~IteratorAdapter() = default;
 ```
 
-Let's also rename our IterableAdapter to RangeAdapter and rename the helper function to something more logical.
+Let's also rename our IterableAdapter to RangeAdapter and the helper function to something more logical.
 
 ```cpp
 template <typename ClosureT>
@@ -630,13 +630,13 @@ std::ranges' algorithms compatibility.
   <summary>Full implementation:</summary>
 
 ```cpp
+#include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <algorithm>
-#include <iostream>
 
 namespace iter {
 
@@ -783,9 +783,9 @@ int main() {
 
 ## Afterword
 
-The main goal of this post was to present a little framework that could be reused to ease the writing of Iterators in C++ 17/20.
+The main goal of this post was to present a little framework that could be reused to ease the writing of iterators in C++17/20.
 
-From what I tested, since closures act as syntactic sugar for anonymous structs, this is a zero-cost abstraction. See the compilation result of
+From what I have tested, since closures act as syntactic sugar for anonymous structs, this is a zero-cost abstraction. See the compilation result of:
 
 ```cpp
 int main() {
@@ -809,10 +809,10 @@ main:
   ret
 ```
 
-Since the closure types cannot be named, those ranges are not really meant to be stored as members (even if it's possible using templates). They offer a simple interface for quick-and-use-once iterators, as it is more common in functional languages.
+Since closure types are unnamed, these ranges are not really meant to be stored as members (even if it is possible using templates). They offer a simple interface for quick, use-once iterators, as it is more common in functional languages.
 
-If STL compatibility is needed, the `C++20` range interface of the last section is required. But maybe it would be easier to use a more regular `range + view` approach.
+If STL compatibility is needed, the `C++20` range interface of the last section is required. But maybe it would be easier to use a more conventional `range + view` approach.
 
 ## Acknowledgements
 
-A huge thank you to [Augustin Fabre](https://augfab.dev), who helped me design Adapters' interfaces and sculpt the shapeless idea of closures as iterators. Thanks [Ninikiril](https://github.com/Ninikiril) for proofreading and for finding a nasty off-by-one error.
+A huge thank you to [Augustin Fabre](https://augfab.dev), who helped me design the interfaces of the adapters and sculpt the shapeless idea of closures as iterators. Thanks [Ninikiril](https://github.com/Ninikiril) for proofreading and for finding a nasty off-by-one error.
