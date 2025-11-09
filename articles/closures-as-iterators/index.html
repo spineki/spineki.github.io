@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script>
+      // Handling user preferred theme here to get rid of flickering.
+
+      /**
+      * Handling color scheme choice.
+      * Courtesy: https://css-tricks.com/a-complete-guide-to-dark-mode-on-the-web/#combining
+      * */
+
+      // Checking the user already did choose a custom theme.
+      let currentTheme = localStorage.getItem("theme");
+
+      if (currentTheme === null) {
+        // User preferences
+        const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+        if (prefersDarkScheme.matches) {
+          currentTheme = "dark";
+        } else {
+          currentTheme = "light";
+        }
+        localStorage.setItem("theme", currentTheme);
+      }
+      if (currentTheme === "dark") {
+        document.documentElement.classList.add("dark-theme");
+      }
+    </script>
+
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+    <!-- Enable responsiveness on mobile devices-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="color-scheme" content="dark light">
+
+    <title>Compendium</title>
+
+    
+        <!-- Theme picker -->
+        <script type="text/javascript" src="https://spineki.github.io/theme_picker.js"></script>
+        <!-- Search bar -->
+        <script type="text/javascript" src="https://spineki.github.io/elasticlunr.min.js"></script>
+        <script type="text/javascript" src="https://spineki.github.io/search.js"></script>
+        <!-- Math rendering -->
+        <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
+        <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+        </script>
+        <!-- Add copy button to pre blocks -->
+        <script type="text/javascript" src="https://spineki.github.io/copy_button.js" defer></script>
+    
+
+    <!-- CSS -->
+    
+    <link rel="stylesheet" href="https://spineki.github.io/book.css">
+    
+
+    
+    
+</head>
+
+<body>
+    <div class="main-content">
+        
+    <div class="spacer"></div>
+
+    <div class="page">
+        <div class="nav-top">
+    <nav class="nav-content" role="navigation">
+        <ul>
+            <li>
+                <a href="/"> Home </a>
+            </li>
+            <li>
+                <div class="search-container">
+                    <input id="search" type="search" placeholder="Search..." value="">
+                    <div class="search-results">
+                        <ul class="search-results__items"></ul>
+                    </div>
+                </div>
+            </li>
+            <li class="filler"></li>
+            <li>
+                <color-scheme-picker></color-theme-picker>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+        <h1>Closures as iterators</h1>
+
+        <ul class="page-stats">
+            <li>
+                <span>2025-04-13</span>
+                <span>19 minute read </span>
+                <span>(3617 words)</span>
+            </li>
+            <li>
+                <ul class="tags">
+                    
+                    
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/c/">
+                            #c++
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/rust/">
+                            #rust
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/common-lisp/">
+                            #common lisp
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/iterator/">
+                            #iterator
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/closure/">
+                            #closure
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+            </li>
+        </ul>
+
+        <div class="markdown-container">
+            <p>An attempt to ease the writing of iterators in C++.</p>
+
+            <h2 id="tl-dr"><a class="zola-anchor" href="#tl-dr" aria-label="Anchor link for: tl-dr">TL;DR</a></h2>
+<ul>
+<li>It is possible to use closures to mimic iterators in C++.</li>
+<li>The syntax is concise, and focuses on the logic rather than on the usual boilerplate.</li>
+<li>However, a little bit of one-time plumbing is required to get it to work with regular
+iterators and range-based loops.</li>
+<li>Since this method requires a Sentinel as an <code>iterable::end()</code> value, it is not directly compatible with <code>C++17</code> <code>std::algorithms</code>.</li>
+<li>However, this issue vanishes with <code>C++20</code> ranges algorithms.</li>
+</ul>
+<h2 id="prerequisites"><a class="zola-anchor" href="#prerequisites" aria-label="Anchor link for: prerequisites">Prerequisites</a></h2>
+<p>The following post expects the user to be familiar with <code>C++17</code> and iterators.</p>
+<h2 id="introduction"><a class="zola-anchor" href="#introduction" aria-label="Anchor link for: introduction">Introduction</a></h2>
+<p>In my work, I often have to deal with iterators to go through data structures while minimizing the number of allocations.</p>
+<p>However, writing a 30-line struct every time I want to emulate something which can be done with one <code>yield</code> in Python is really cumbersome and time-consuming. I want to focus on the logic, not on the scaffolding.</p>
+<p>But in the end, what is an iterator? It is just something that:</p>
+<ul>
+<li>can step : <code>operator++</code></li>
+<li>can return the pointed value: <code>operator*</code></li>
+<li>can be compared to detect the end of iteration: <code>operator!=</code></li>
+</ul>
+<p>Thus, the struct/class needs an inner mutable state pointing to the correct element.</p>
+<p>While reading the book <a href="https://paulgraham.com/onlisp.html">"On Lisp", by Paul Graham</a> I was amazed by the way he uses closures' capability to maintain an internal mutable state.</p>
+<p>Even if we can't emulate the full glory of Common Lisp's closures, we’ve had <a href="https://en.cppreference.com/w/cpp/language/lambda">lambdas</a> in C++ since C++11.</p>
+<h2 id="1-2-3-mom-i-can-count"><a class="zola-anchor" href="#1-2-3-mom-i-can-count" aria-label="Anchor link for: 1-2-3-mom-i-can-count">1... 2... 3... Mom, I can count!</a></h2>
+<p>Let's try to use a closure to increase a counter.
+<a href="https://godbolt.org/#g:!((g:!((g:!((h:codeEditor,i:(filename:&#x27;1&#x27;,fontScale:14,fontUsePx:&#x27;0&#x27;,j:1,lang:c%2B%2B,selection:(endColumn:14,endLineNumber:16,positionColumn:14,positionLineNumber:16,selectionStartColumn:14,selectionStartLineNumber:16,startColumn:14,startLineNumber:16),source:&#x27;%23include+%3Ciostream%3E%0A%0Aint+main()+%7B%0A++++auto+closure+%3D+%5Bcounter+%3D+0%5D()+mutable+%7B%0A++++++++//+Could+be+even+simpler+with%0A++++++++//+return+counter%2B%2B%3B%0A%0A++++++++%2B%2Bcounter%3B%0A++++++++return+counter%3B%0A++++%7D%3B%0A%0A++++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A%0A++++return+0%3B%0A%7D&#x27;),l:&#x27;5&#x27;,n:&#x27;0&#x27;,o:&#x27;C%2B%2B+source+%231&#x27;,t:&#x27;0&#x27;)),k:50.997203335578966,l:&#x27;4&#x27;,n:&#x27;0&#x27;,o:&#x27;&#x27;,s:0,t:&#x27;0&#x27;),(g:!((g:!((h:compiler,i:(compiler:g114,filters:(b:&#x27;0&#x27;,binary:&#x27;1&#x27;,binaryObject:&#x27;1&#x27;,commentOnly:&#x27;0&#x27;,debugCalls:&#x27;1&#x27;,demangle:&#x27;0&#x27;,directives:&#x27;0&#x27;,execute:&#x27;1&#x27;,intel:&#x27;0&#x27;,libraryCode:&#x27;0&#x27;,trim:&#x27;1&#x27;,verboseDemangling:&#x27;0&#x27;),flagsViewOpen:&#x27;1&#x27;,fontScale:14,fontUsePx:&#x27;0&#x27;,j:1,lang:c%2B%2B,libs:!(),options:&#x27;-Wall+-O3&#x27;,overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:&#x27;5&#x27;,n:&#x27;0&#x27;,o:&#x27;+x86-64+gcc+11.4+(Editor+%231)&#x27;,t:&#x27;0&#x27;)),k:49.002796664421034,l:&#x27;4&#x27;,m:50,n:&#x27;0&#x27;,o:&#x27;&#x27;,s:0,t:&#x27;0&#x27;),(g:!((h:executor,i:(argsPanelShown:&#x27;1&#x27;,compilationPanelShown:&#x27;0&#x27;,compiler:g114,compilerName:&#x27;&#x27;,compilerOutShown:&#x27;0&#x27;,execArgs:&#x27;&#x27;,execStdin:&#x27;&#x27;,fontScale:14,fontUsePx:&#x27;0&#x27;,j:1,lang:c%2B%2B,libs:!(),options:&#x27;-Wall+-O3&#x27;,overrides:!(),runtimeTools:!(),source:1,stdinPanelShown:&#x27;1&#x27;,tree:0,wrap:&#x27;1&#x27;),l:&#x27;5&#x27;,n:&#x27;0&#x27;,o:&#x27;Executor+x86-64+gcc+11.4+(C%2B%2B,+Editor+%231)&#x27;,t:&#x27;0&#x27;)),header:(),l:&#x27;4&#x27;,m:50,n:&#x27;0&#x27;,o:&#x27;&#x27;,s:0,t:&#x27;0&#x27;)),k:49.002796664421034,l:&#x27;3&#x27;,n:&#x27;0&#x27;,o:&#x27;&#x27;,t:&#x27;0&#x27;)),l:&#x27;2&#x27;,n:&#x27;0&#x27;,o:&#x27;&#x27;,t:&#x27;0&#x27;)),version:4">Godbolt</a></p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;iostream&gt;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[counter </span><span style="color:#ff79c6;">= </span><span style="color:#bd93f9;">0</span><span>]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#6272a4;">// Could be even simpler with
+</span><span>    </span><span style="color:#6272a4;">// return counter++;
+</span><span>    </span><span style="color:#ff79c6;">++</span><span>counter;
+</span><span>    </span><span style="color:#ff79c6;">return</span><span> counter;
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#50fa7b;">closure</span><span>() </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#50fa7b;">closure</span><span>() </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#50fa7b;">closure</span><span>() </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#bd93f9;">0</span><span>;
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<pre data-lang="console" style="background-color:#282a36;color:#f8f8f2;" class="language-console "><code class="language-console" data-lang="console"><span>1
+</span><span>2
+</span><span>3
+</span></code></pre>
+<p>Simple, but effective. The closure's state updates every time we call it.</p>
+<blockquote>
+<p>Note: the <code>mutable</code> keyword is required in order to update the captured counter variable, which is <code>read-only</code> by default.</p>
+</blockquote>
+<h2 id="indexing-using-a-lambda"><a class="zola-anchor" href="#indexing-using-a-lambda" aria-label="Anchor link for: indexing-using-a-lambda">Indexing using a lambda</a></h2>
+<p>Now that we know how to count, we should be able to index a vector (or any indexable data structure).</p>
+<p>For example, we can capture a vector by reference and iterate on it using the previous closure. <a href="https://godbolt.org/#g:!((g:!((g:!((h:codeEditor,i:(filename:&#x27;1&#x27;,fontScale:14,fontUsePx:&#x27;0&#x27;,j:1,lang:c%2B%2B,selection:(endColumn:2,endLineNumber:21,positionColumn:2,positionLineNumber:21,selectionStartColumn:2,selectionStartLineNumber:21,startColumn:2,startLineNumber:21),source:&#x27;%23include+%3Ciostream%3E%0A%23include+%3Cvector%3E%0A%0Aint+main()+%7B%0A++std::vector%3Cint%3E+vec%7B10,+20,+30%7D%3B%0A%0A++auto+closure+%3D+%5B%26vec,+counter+%3D+0%5D()+mutable+%7B%0A++++auto+elem+%3D+vec%5Bcounter%5D%3B%0A++++%2B%2Bcounter%3B%0A++++return+elem%3B%0A%0A++++//+Could+be+even+simpler+(but+less+readable)+with%0A++++//+return+vec%5Bcounter%2B%2B%5D%3B%0A++%7D%3B%0A%0A++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A++std::cout+%3C%3C+closure()+%3C%3C+%22%5Cn%22%3B%0A%0A++return+0%3B%0A%7D&#x27;),l:&#x27;5&#x27;,n:&#x27;0&#x27;,o:&#x27;C%2B%2B+source+%231&#x27;,t:&#x27;0&#x27;)),k:50.997203335578966,l:&#x27;4&#x27;,n:&#x27;0&#x27;,o:&#x27;&#x27;,s:0,t:&#x27;0&#x27;),(g:!((g:!((h:compiler,i:(compiler:g114,filters:(b:&#x27;0&#x27;,binary:&#x27;1&#x27;,binaryObject:&#x27;1&#x27;,commentOnly:&#x27;0&#x27;,debugCalls:&#x27;1&#x27;,demangle:&#x27;0&#x27;,directives:&#x27;0&#x27;,execute:&#x27;1&#x27;,intel:&#x27;0&#x27;,libraryCode:&#x27;0&#x27;,trim:&#x27;1&#x27;,verboseDemangling:&#x27;0&#x27;),flagsViewOpen:&#x27;1&#x27;,fontScale:14,fontUsePx:&#x27;0&#x27;,j:1,lang:c%2B%2B,libs:!(),options:&#x27;-Wall+-O3&#x27;,overrides:!(),selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:1),l:&#x27;5&#x27;,n:&#x27;0&#x27;,o:&#x27;+x86-64+gcc+11.4+(Editor+%231)&#x27;,t:&#x27;0&#x27;)),k:49.002796664421034,l:&#x27;4&#x27;,m:50,n:&#x27;0&#x27;,o:&#x27;&#x27;,s:0,t:&#x27;0&#x27;),(g:!((h:executor,i:(argsPanelShown:&#x27;1&#x27;,compilationPanelShown:&#x27;0&#x27;,compiler:g114,compilerName:&#x27;&#x27;,compilerOutShown:&#x27;0&#x27;,execArgs:&#x27;&#x27;,execStdin:&#x27;&#x27;,fontScale:14,fontUsePx:&#x27;0&#x27;,j:1,lang:c%2B%2B,libs:!(),options:&#x27;-Wall+-O3&#x27;,overrides:!(),runtimeTools:!(),source:1,stdinPanelShown:&#x27;1&#x27;,tree:0,wrap:&#x27;1&#x27;),l:&#x27;5&#x27;,n:&#x27;0&#x27;,o:&#x27;Executor+x86-64+gcc+11.4+(C%2B%2B,+Editor+%231)&#x27;,t:&#x27;0&#x27;)),header:(),l:&#x27;4&#x27;,m:50,n:&#x27;0&#x27;,o:&#x27;&#x27;,s:0,t:&#x27;0&#x27;)),k:49.002796664421034,l:&#x27;3&#x27;,n:&#x27;0&#x27;,o:&#x27;&#x27;,t:&#x27;0&#x27;)),l:&#x27;2&#x27;,n:&#x27;0&#x27;,o:&#x27;&#x27;,t:&#x27;0&#x27;)),version:4">Godbolt</a></p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;iostream&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;vector&gt;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; </span><span style="color:#50fa7b;">vec</span><span>{</span><span style="color:#bd93f9;">10</span><span>, </span><span style="color:#bd93f9;">20</span><span>, </span><span style="color:#bd93f9;">30</span><span>};
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[</span><span style="color:#ff79c6;">&amp;</span><span>vec, counter </span><span style="color:#ff79c6;">= </span><span style="color:#bd93f9;">0</span><span>]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> elem </span><span style="color:#ff79c6;">=</span><span> vec[counter];
+</span><span>    </span><span style="color:#ff79c6;">++</span><span>counter;
+</span><span>    </span><span style="color:#ff79c6;">return</span><span> elem;
+</span><span>    </span><span style="color:#6272a4;">// Could be even simpler (but less readable) with
+</span><span>    </span><span style="color:#6272a4;">// return vec[counter++];
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#50fa7b;">closure</span><span>() </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#50fa7b;">closure</span><span>() </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#50fa7b;">closure</span><span>() </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#bd93f9;">0</span><span>;
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<pre data-lang="console" style="background-color:#282a36;color:#f8f8f2;" class="language-console "><code class="language-console" data-lang="console"><span>10
+</span><span>20
+</span><span>30
+</span></code></pre>
+<p>Nice! So we were able to re-create, more-or-less, the equivalent of <code>operator++</code> and <code>operator*</code> using a functor.</p>
+<h2 id="one-step-too-far"><a class="zola-anchor" href="#one-step-too-far" aria-label="Anchor link for: one-step-too-far">One step too far</a></h2>
+<p>Not so fast. We stopped calling the previous closure just in time, but we would get an out-of-bounds error if we were to call it once more. We need a built-in way to detect the end of iteration.</p>
+<p>We can get some inspiration from other languages, like Rust. In Rust, an iterator is just something that must implement the <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#tymethod.next">next()</a> function</p>
+<pre data-lang="rust" style="background-color:#282a36;color:#f8f8f2;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-style:italic;color:#8be9fd;">fn </span><span style="color:#50fa7b;">next</span><span>(</span><span style="color:#ff79c6;">&amp;mut </span><span style="font-style:italic;color:#ffb86c;">self</span><span>) </span><span style="color:#ff79c6;">-&gt; </span><span style="font-style:italic;color:#66d9ef;">Option</span><span style="color:#ff79c6;">&lt;</span><span style="font-style:italic;color:#8be9fd;">Self</span><span style="font-style:italic;color:#ff79c6;">::</span><span style="color:#ff79c6;">Item&gt;
+</span></code></pre>
+<p>Some(value) allows retrieving the current pointed value,
+None means the end of iteration.</p>
+<p>I love Rust iterators, so I will try doing something similar.
+Thankfully, since C++17, we can have optionals in the standard library, via <code>#include &lt;optional&gt;</code>.</p>
+<blockquote>
+<p>Note: you may want to avoid optionals if you <del>don't like working with them</del> already work with pointers, or if you want to work with refs and you do not want to deal with <code>std::reference_wrapper</code>. In this case, you can totally adapt this post, using nullptr for the end of iteration and non-null pointers for regular values. It is pretty much straightforward and would result in removing the <code>is_optional</code>-related code in the following section.</p>
+</blockquote>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;iostream&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;vector&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;optional&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;utility&gt;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; </span><span style="color:#50fa7b;">vec</span><span>{</span><span style="color:#bd93f9;">10</span><span>, </span><span style="color:#bd93f9;">20</span><span>, </span><span style="color:#bd93f9;">30</span><span>};
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[</span><span style="color:#ff79c6;">&amp;</span><span>vec, counter </span><span style="color:#ff79c6;">= </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">size_t</span><span>{</span><span style="color:#bd93f9;">0</span><span>}]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return </span><span>(counter </span><span style="color:#ff79c6;">&lt;</span><span> vec</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>()) </span><span style="color:#ff79c6;">? </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">make_optional</span><span>(vec[counter</span><span style="color:#ff79c6;">++</span><span>])
+</span><span>                                  </span><span style="color:#ff79c6;">:</span><span> std</span><span style="color:#ff79c6;">::</span><span>nullopt;
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">while </span><span>(</span><span style="font-style:italic;color:#8be9fd;">auto</span><span> value </span><span style="color:#ff79c6;">= </span><span style="color:#50fa7b;">closure</span><span>()) </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#6272a4;">// value is an optional
+</span><span>    std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt;</span><span> value</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">value</span><span>() </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#bd93f9;">0</span><span>;
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<pre data-lang="console" style="background-color:#282a36;color:#f8f8f2;" class="language-console "><code class="language-console" data-lang="console"><span>10
+</span><span>20
+</span><span>30
+</span></code></pre>
+<p>Great! So now our closure starts to really act as a mix between an iterator and an iterable.
+Life is good, life is great. But are we done?</p>
+<h2 id="c-expectations"><a class="zola-anchor" href="#c-expectations" aria-label="Anchor link for: c-expectations">C++ expectations</a></h2>
+<p>We were able to iterate on the closure using a <a href="https://en.cppreference.com/w/cpp/language/while">while loop with a declaration condition</a> in the previous section.</p>
+<p>However, we cannot do the same with <a href="https://en.cppreference.com/w/cpp/language/range-for">range-based for loops</a> since it roughly does</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#6272a4;">// Turns...
+</span><span>  </span><span style="color:#ff79c6;">for </span><span>(</span><span style="font-style:italic;color:#8be9fd;">auto</span><span> value</span><span style="color:#ff79c6;">:</span><span> iterable) </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#6272a4;">/* Having fun. */
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="color:#6272a4;">// ...into.
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">for </span><span>(</span><span style="font-style:italic;color:#8be9fd;">auto</span><span> it </span><span style="color:#ff79c6;">=</span><span> iterable</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">begin</span><span>() ; it </span><span style="color:#ff79c6;">!=</span><span> iterable</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">end</span><span>(); </span><span style="color:#ff79c6;">++</span><span>it)
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> value </span><span style="color:#ff79c6;">= *</span><span>it;
+</span><span>    </span><span style="color:#6272a4;">/* Having fun. */
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<p>We therefore need a way to adapt our closure interface into a C++ iterable.</p>
+<h2 id="plumbing-time"><a class="zola-anchor" href="#plumbing-time" aria-label="Anchor link for: plumbing-time">Plumbing time!</a></h2>
+<h3 id="iterator"><a class="zola-anchor" href="#iterator" aria-label="Anchor link for: iterator">Iterator</a></h3>
+<p>Let's start by wrapping our closure into an iterator.
+To begin with, we write a type trait to check if a provided value is an optional.
+This is not mandatory, but it will allow the code to break early if the provided closure does not return an <code>std::optional</code>.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;type_traits&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;optional&gt;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> T&gt; </span><span style="font-style:italic;color:#8be9fd;">struct </span><span>is_optional : </span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">std</span><span style="text-decoration:underline;font-style:italic;color:#ff79c6;">::</span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">false_type </span><span style="color:#ffffff;">{}</span><span>;
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> T&gt; </span><span style="font-style:italic;color:#8be9fd;">struct </span><span>is_optional&lt;std</span><span style="color:#ff79c6;">::</span><span>optional&lt;T&gt;&gt; : </span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">std</span><span style="text-decoration:underline;font-style:italic;color:#ff79c6;">::</span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">true_type </span><span style="color:#ffffff;">{}</span><span>;
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> T&gt; </span><span style="color:#ff79c6;">constexpr </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> is_optional_v </span><span style="color:#ff79c6;">=</span><span> is_optional&lt;T&gt;</span><span style="color:#ff79c6;">::</span><span>value;
+</span></code></pre>
+<p>Now we can write the basic skeleton of the adapter iterator.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">template
+</span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt;
+</span><span style="font-style:italic;color:#8be9fd;">class </span><span style="text-decoration:underline;color:#8be9fd;">IteratorAdapter </span><span style="color:#ffffff;">{
+</span><span style="color:#ff79c6;">private</span><span>:
+</span><span>  </span><span style="color:#6272a4;">// to ease typing, get the Optional type returned by the closure...
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>OptReturnT </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span>invoke_result_t&lt;ClosureT&gt;;
+</span><span>  </span><span style="color:#6272a4;">// ... and check if it&#39;s really an optional!
+</span><span>  </span><span style="color:#ff79c6;">static_assert</span><span>(is_optional_v&lt;OptReturnT&gt;);
+</span><span>
+</span><span style="color:#ff79c6;">public</span><span>:
+</span><span>  </span><span style="color:#6272a4;">// Regular iterators flags expected by the STL.
+</span><span>  </span><span style="color:#6272a4;">// Since we use a functor approach, we can only go forward.
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>iterator_category </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span>forward_iterator_tag;
+</span><span>  </span><span style="color:#6272a4;">// Extract the value wrapped by the optional
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>value_type </span><span style="color:#ff79c6;">=
+</span><span>      std</span><span style="color:#ff79c6;">::</span><span>remove_reference_t&lt;</span><span style="font-style:italic;color:#8be9fd;">decltype</span><span>(</span><span style="color:#ff79c6;">*</span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">declval</span><span>&lt;OptReturnT&gt;())&gt;;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>element_type </span><span style="color:#ff79c6;">=</span><span> value_type;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>pointer </span><span style="color:#ff79c6;">=</span><span> value_type </span><span style="color:#ff79c6;">*</span><span>;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>reference </span><span style="color:#ff79c6;">=</span><span> value_type </span><span style="color:#ff79c6;">&amp;</span><span>;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>difference_type </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span style="font-style:italic;color:#66d9ef;">ptrdiff_t</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#6272a4;">// Using the const &amp;&amp; trick, we make sure that the user transfers
+</span><span>  </span><span style="color:#6272a4;">// the closure&#39;s ownership to this adapter.
+</span><span>  </span><span style="color:#50fa7b;">IteratorAdapter</span><span>(</span><span style="color:#ff79c6;">const</span><span> ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>)
+</span><span>    : </span><span style="color:#ffffff;">closure_</span><span>{std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure)}, </span><span style="color:#ffffff;">current_value_</span><span>{</span><span style="color:#50fa7b;">closure_</span><span>()} </span><span style="color:#ffffff;">{}
+</span><span>
+</span><span>  IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span style="color:#50fa7b;">operator++</span><span>()</span><span style="color:#ffffff;">{ </span><span style="color:#6272a4;">/* todo, see below */ </span><span style="color:#ffffff;">}
+</span><span>  reference </span><span style="color:#50fa7b;">operator*</span><span>() </span><span style="color:#ffffff;">{ </span><span style="color:#6272a4;">/* todo, see below */ </span><span style="color:#ffffff;">}
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator!=</span><span>(</span><span style="color:#ff79c6;">const</span><span> TODO </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{ </span><span style="color:#6272a4;">/* todo, see below */ </span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#ff79c6;">private</span><span>:
+</span><span>  ClosureT closure_;
+</span><span>  OptReturnT current_value_;
+</span><span style="color:#ffffff;">}</span><span>;
+</span></code></pre>
+<blockquote>
+<p>Notice here that we call the closure in the constructor. This way, we initialize properly the <code>current_value</code> state to point to the first value of the iteration. While traditional C++ iterators tend to start at the correct beginning and go one step too far at the end, our closure is one step behind.</p>
+</blockquote>
+<p>We can now focus on the <code>operator++</code>, <code>operator*</code>, <code>operator!=</code> methods.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#6272a4;">/// Prefix increment.
+</span><span>IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span style="color:#50fa7b;">operator++</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#6272a4;">// Not going past the end.
+</span><span>  </span><span style="color:#8be9fd;">assert</span><span>(current_value_);
+</span><span>  current_value_ </span><span style="color:#ff79c6;">= </span><span style="color:#50fa7b;">closure_</span><span>();
+</span><span>  </span><span style="color:#6272a4;">// For types with no move-assignment, we can fallback to the move constructor with.
+</span><span>  </span><span style="color:#6272a4;">// OptReturnT new_value = closure_();
+</span><span>  </span><span style="color:#6272a4;">// if (new_value) {
+</span><span>  </span><span style="color:#6272a4;">//   current_value_.emplace(std::move(new_value).value());
+</span><span>  </span><span style="color:#6272a4;">// } else {
+</span><span>  </span><span style="color:#6272a4;">//   current_value_.reset();
+</span><span>  </span><span style="color:#6272a4;">// }
+</span><span>  </span><span style="color:#ff79c6;">return *</span><span style="color:#bd93f9;">this</span><span>;
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<p><code>operator*</code> is the simplest of them all!</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span>reference </span><span style="color:#50fa7b;">operator*</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#6272a4;">// Not accessing the value if the iterator reached the end.
+</span><span>  </span><span style="color:#8be9fd;">assert</span><span>(current_value_);
+</span><span>  </span><span style="color:#ff79c6;">return *</span><span>current_value_;
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<p>But what should we do for the <code>operator!=</code>? Is there any meaning to comparing our closure-based iterators if it is not to detect the end of iteration?
+Let's fix this philosophical question by dodging it and let us introduce a dedicated struct to reify this end concept.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">struct </span><span>Sentinel </span><span style="color:#ffffff;">{}</span><span>;
+</span></code></pre>
+<p>And now, we can do.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#6272a4;">// Two iterators are different.
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> OtherClosureT&gt;
+</span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator!=</span><span>(</span><span style="color:#ff79c6;">const</span><span> IteratorAdapter&lt;OtherClosureT&gt; </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#bd93f9;">true</span><span>;
+</span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#6272a4;">// If the current_value is std::nullopt, the iterator ended (==Sentinel)
+</span><span style="color:#6272a4;">// else, it is still iterating and it is not equal to Sentinel.
+</span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator!=</span><span>(</span><span style="color:#ff79c6;">const</span><span> Sentinel </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return static_cast</span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">bool</span><span>&gt;(current_value_);
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<blockquote>
+<p>Note: the operator!= is not really required if the iterator is just used as glorified pointer. (just ++ and *). But it will come in handy while creating iterables in the next section.</p>
+</blockquote>
+<p>Let's add a nice helper function to ease <a href="https://en.cppreference.com/w/cpp/language/class_template_argument_deduction">type deduction</a> and provide a simpler name.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt; </span><span style="font-style:italic;color:#8be9fd;">auto </span><span style="color:#50fa7b;">into_iter</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>) </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#50fa7b;">IteratorAdapter</span><span>{std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure)};
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<p>And...</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; </span><span style="color:#50fa7b;">vec</span><span>{</span><span style="color:#bd93f9;">10</span><span>, </span><span style="color:#bd93f9;">20</span><span>, </span><span style="color:#bd93f9;">30</span><span>};
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[</span><span style="color:#ff79c6;">&amp;</span><span>vec, idx </span><span style="color:#ff79c6;">= </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">size_t</span><span>{</span><span style="color:#bd93f9;">0</span><span>}]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return</span><span> idx </span><span style="color:#ff79c6;">&lt;</span><span> vec</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>() </span><span style="color:#ff79c6;">? </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">make_optional</span><span>(vec[idx</span><span style="color:#ff79c6;">++</span><span>]) </span><span style="color:#ff79c6;">:</span><span> std</span><span style="color:#ff79c6;">::</span><span>nullopt;
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">for </span><span>(</span><span style="font-style:italic;color:#8be9fd;">auto</span><span> value </span><span style="color:#ff79c6;">: </span><span>iter</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">into_range</span><span>(std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure))) </span><span style="color:#ffffff;">{
+</span><span>    std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt;</span><span> value </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<pre data-lang="console" style="background-color:#282a36;color:#f8f8f2;" class="language-console "><code class="language-console" data-lang="console"><span>10
+</span><span>20
+</span><span>30
+</span></code></pre>
+<p>Hurrah! Thankfully, creating an iterable from this iterator is way easier.</p>
+<h3 id="iterable"><a class="zola-anchor" href="#iterable" aria-label="Anchor link for: iterable">Iterable</a></h3>
+<p>An iterator should offer two basic member functions.</p>
+<ul>
+<li>Returning an iterator pointing to the beginning: <code>begin()</code>.</li>
+<li>Returning an iterator pointing past the end: <code>end()</code></li>
+</ul>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt; </span><span style="font-style:italic;color:#8be9fd;">class </span><span style="text-decoration:underline;color:#8be9fd;">IterableAdapter </span><span style="color:#ffffff;">{
+</span><span style="color:#ff79c6;">public</span><span>:
+</span><span>  </span><span style="color:#6272a4;">///
+</span><span>  </span><span style="color:#50fa7b;">IterableAdapter</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>)
+</span><span>      : </span><span style="color:#ffffff;">iter_</span><span>{std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure)} </span><span style="color:#ffffff;">{}
+</span><span>
+</span><span>  IteratorAdapter&lt;ClosureT&gt; </span><span style="color:#50fa7b;">begin</span><span>() </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{ </span><span style="color:#ff79c6;">return</span><span> iter_; </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="color:#6272a4;">// We use the previously described Sentinel as the end.
+</span><span>  Sentinel </span><span style="color:#50fa7b;">end</span><span>() </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{ </span><span style="color:#ff79c6;">return </span><span style="color:#ffffff;">{}</span><span>; </span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#ff79c6;">private</span><span>:
+</span><span>  IteratorAdapter&lt;ClosureT&gt; iter_;
+</span><span style="color:#ffffff;">}</span><span>;
+</span></code></pre>
+<p>As with the iterator, let's add a simple wrapper.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt; </span><span style="font-style:italic;color:#8be9fd;">auto </span><span style="color:#50fa7b;">into_iterable</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>) </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#50fa7b;">IterableAdapter</span><span>{std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure)};
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<p>And...</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; </span><span style="color:#50fa7b;">vec</span><span>{</span><span style="color:#bd93f9;">10</span><span>, </span><span style="color:#bd93f9;">20</span><span>, </span><span style="color:#bd93f9;">30</span><span>};
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[</span><span style="color:#ff79c6;">&amp;</span><span>vec, idx </span><span style="color:#ff79c6;">= </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">size_t</span><span>{</span><span style="color:#bd93f9;">0</span><span>}]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return</span><span> idx </span><span style="color:#ff79c6;">&lt;</span><span> vec</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>() </span><span style="color:#ff79c6;">? </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">make_optional</span><span>(vec[idx</span><span style="color:#ff79c6;">++</span><span>]) </span><span style="color:#ff79c6;">:</span><span> std</span><span style="color:#ff79c6;">::</span><span>nullopt;
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">for </span><span>(</span><span style="font-style:italic;color:#8be9fd;">auto</span><span> value </span><span style="color:#ff79c6;">: </span><span>iter</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">into_iterable</span><span>(std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure))) </span><span style="color:#ffffff;">{
+</span><span>    std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt;</span><span> value </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<pre data-lang="console" style="background-color:#282a36;color:#f8f8f2;" class="language-console "><code class="language-console" data-lang="console"><span>10
+</span><span>20
+</span><span>30
+</span></code></pre>
+<p>We did it! From an end user's point of view, the required logic is minimal.</p>
+<p>Once the adapters are moved into a header, it just boils down to:</p>
+<ol>
+<li>Define a closure</li>
+<li>Wrap it in <code>into_iterable()</code></li>
+<li>?</li>
+<li>Profit</li>
+</ol>
+<p>I can now focus on the logic and not on the boilerplate anymore.</p>
+<p><a href="https://godbolt.org/#z:OYLghAFBqd5QCxAYwPYBMCmBRdBLAF1QCcAaPECAMzwBtMA7AQwFtMQByARg9KtQYEAysib0QXACx8BBAKoBnTAAUAHpwAMvAFYTStJg1DIApACYAQuYukl9ZATwDKjdAGFUtAK4sGe1wAyeAyYAHI%2BAEaYxCAAnADspAAOqAqETgwe3r56KWmOAkEh4SxRMQm2mPYFDEIETMQEWT5%2BXJXVGXUNBEVhkdFxiQr1jc05bcPdvSVlgwCUtqhexMjsHOYAzMHI3lgA1CYbbqIKSo2H2CYaAIKb27uYB0eoSTViF1e3ZlsMO177hzcBAAnklMAB9AjEJiEBQfG53X4PJ5uLyOWiEYHwr4/P4Ao4AN0wDhI2MReMegKcw2ImFYZJuzDYCiSTFWe0I0QO8SsCJuBEwLCSBgFKJBYKZjwAKhc9jSvA4OQpwS83rQ9iA5QR0CAQFQxEpIaDKTyTPEACKHXnXAVCkWUo7ixisaWy%2BWKvDK1UZd5HYY6kDegS%2BtwyjaXcMarUBqFeCFO7lWC1Wz6fW3CpiiwFOyV7MPYPZoBjDTCqJLEPZMNGoJUq14%2B2jgglPc21oPMWiA/O6gliOMpvnXd0EPZCRiOELqs1Jy0ba1pwUZrOO425ty0VLLTD5wsGU57ACSAuhRGI13QTFeXOnn3LeF7ApAnz2ey8aSMewA8q8AEqYAjLAwUottGurBASqAANYQrSCheLQBCQoC66brS%2BYDtcL6TI4yDgkwpzRAQECenWaqAt%2BBB/gBxBARcEBzHMGG3l4EQYsgT43C%2Bb7BMAHLHpmJDgqIArACQwIgf6ur8MQADuDToOCnInoJ9TABhXHvrxvbePGxots%2BL6GZJIC0iwqBEuCtJUNEjCrEhRxYDsToQAAVMZjm0Np5G/v%2BgH5vRjHhupr6aXsVSCuORpgiB2lxlFmDBdxH4pMEx4xX2unRS5iWhVZNm/A6raxZllJmAAbDlPGFgIwyWZg1m0gVEnarqTDoApRa1QQgJ5Y1qwfHOBlJbx%2BBUA1tklc1AavMQo1UPZ86cYe/Gnuel7HhAnUjihcFoQc5XmGVOyoZgjFLYZUbHbtELTsZZlEptG7XYxFqkIWyyNYhxXgtOV1buC9Fmq2N7JoOL5HtEAlnheV4VodLyQ6e1jWPRiYGS%2B%2BFnERyAfZF32BdaF048Qn1Nhl4IgX9tIAwT6N7LS1EMHsLkEAgnrBUDqZLb1E17AjynEC5qM3udlYEY0m244IZM6eCtOiwzgHM8TpPfRzoO3Et6b2mKq4ul%2BrPRDtW7oUtESoJ4fNggLYBgIc5qbTVI4QwLa2w%2BRhvEMbaGyodczVcWI4i5hhmKzReyxglg1LZzYN7Oblv81Dtv247gejuOwRVPtZX%2B1taMK754fYXguEnN1RwJ524aSyTePk/LIex5rIfa5mDpAnrbAGwg0Q7lXVuI6SGyzg7%2Befp7wHw57edOwXIcvmHTO265rOevpI98zP6uWoOd4PuwBne9uu4nT90chxRVF%2Be9dfS2rF%2Bc4//KLjr2Zd48x87lWRAcoIqCKQ2l/HOh0qanXnovIuTMXZQzdseW6LU9QkDkrNZCT0TZ0TAS9Wc84NYLjtO3XWEp9Zf1lDsTGy1IasUwHA68pobhJBYmxDiIcYHUNocQCAwDDqgPQbSf2molI/R5MZaSKD0BoJOv5LBQM0Z4KWjA1aMN4FHFIZGKIwBgio3ztOemUC%2BLRHPhYbku8W4vjHIILO6pXDaLnropecicEmK5tcfe7cWHgxWiQDhkjro7iEUxZMz8bSv0Ie/Yh3c1EFh/jWVKAClJMGoVwvhJ8eHlSwRAvRjNKHQnYco6ICCAxiPkr4jBNcZFBNwaY1MFo9gAHo6l7ElCyNkjwlIuNSnsFgMIGDC3oSHYyRISTECpIIWUQzpxcA0G9Mw0y9gbA0E/RaIcYmn2uiBEwABWKw5UhlvTwOgVQU1dRpAAF7xmnIs5MmyHb%2BxYGiRJ9BMmQOyQco5gI9hDIAHRnMwMLDYAAxUCIBunQVIg2CAEztlvORpYLZ5oBHAoYPBDcrwd5MSWtJPYEBVnFSjEpMC/9AFUPoBAO65k/lYIYs84FaA0Qog%2BXiwEHzzBmC2W4BgrL0UIg1hwBYtBOCbN4H4DgWhSCoE4G4WFxiFBLBWKVDYPBSAEE0HyhYkEQDxAABxfLKoqzZ2rYiSHiBsMqWrJBmH0JwSQwrVXis4LwBQIBpkqtFXy0gcBYAwEQCgVAQo6DRHIJQNA/r6AxGAFwKQfA6DHidRACIdqIjBAaMCTgSqk3MGIMCT8ERtDEldUqkNbBBCfgYLQVNbrSBYAiF4YAbgxC0CddwXgWBulGHEJW/AtIHD3kwE2sVpZiRojWEq1KVQ7UYgiNCLNHgsB2qhHgFgabeBEmIObJQ5pBSGGABiIwqqFhUAMMABQAA1PAmAZLfkYMumQggRBiHYFG/gghFAqHUJW3QbQDB7tMHCyw%2Bg8ARCdZABY7Ym0AFoADqDa9jgc/BsWD/p7a/p2RYLg8ReAUpJgcvt8AFh2HzRkFwDB3CeBaP4Ej0x%2BgxDaHkdIAgxitGSKkejDAqOlAGBMcKPaBBdFGGR8Y7RCO8ZGD0LOMxOO2FE4xvQkxGjsdmFwfDcrVgSH5YK21laJUcD2KoLVZVwNlUkHsYAyBkB7EjV84zEBcCEBIPtRVcxeCuq0AxUgGrJCxC%2BRoDQZh4ixDKoFyQFqpkbGkAKjgNrSBLs2dMkVYrtOOudcq/dHrvUQCQIOnGp4g04uIMe5QhgqhCAQKgGSIrC1%2BqSHQTMGRCuThK2V%2BLvAQ3VbDSACNUbWsBuIKEF0DrSDdbDZ%2BNEjXyt2qy9cfLTbeBZbqPgEVvBn3CFEOIJ9shX1qDtZ%2B/Q26UDSoA0BvD4r6w1U4FBmDcGEPgaQyPFD1h0OYdXcQHDwH6KkGIF4SxbApQW0bcd2VyxVMTG1MEerxXSvjebcq2k7BpkyWhEkZd6mOBCtIM1%2B1HBsCqCHaeXT%2BnDPGdM%2BZyz1mpV/psHsWzePNhKec/uhYvc2oDHexFqLMW4t2sS7YZLLm1XuZAGYLgXzTXmqFxoTZ5V9VastRFjYmmEsDb525iLZgFeYaVwz0gq60jOEkEAA%3D%3D">Godbolt</a></p>
+<details>
+  <summary>Full implementation: </summary>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;cassert&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;optional&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;type_traits&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;utility&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;vector&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;iostream&gt;
+</span><span>
+</span><span style="color:#ff79c6;">namespace </span><span>iter </span><span style="color:#ffffff;">{
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> T&gt; </span><span style="font-style:italic;color:#8be9fd;">struct </span><span>is_optional : </span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">std</span><span style="text-decoration:underline;font-style:italic;color:#ff79c6;">::</span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">false_type </span><span style="color:#ffffff;">{}</span><span>;
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> T&gt; </span><span style="font-style:italic;color:#8be9fd;">struct </span><span>is_optional&lt;std</span><span style="color:#ff79c6;">::</span><span>optional&lt;T&gt;&gt; : </span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">std</span><span style="text-decoration:underline;font-style:italic;color:#ff79c6;">::</span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">true_type </span><span style="color:#ffffff;">{}</span><span>;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> T&gt; </span><span style="color:#ff79c6;">constexpr </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> is_optional_v </span><span style="color:#ff79c6;">=</span><span> is_optional&lt;T&gt;</span><span style="color:#ff79c6;">::</span><span>value;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">struct </span><span>Sentinel </span><span style="color:#ffffff;">{}</span><span>;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt; </span><span style="font-style:italic;color:#8be9fd;">class </span><span style="text-decoration:underline;color:#8be9fd;">IteratorAdapter </span><span style="color:#ffffff;">{
+</span><span style="color:#ff79c6;">private</span><span>:
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>OptReturnT </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span>invoke_result_t&lt;ClosureT&gt;;
+</span><span>  </span><span style="color:#ff79c6;">static_assert</span><span>(is_optional_v&lt;OptReturnT&gt;);
+</span><span>
+</span><span style="color:#ff79c6;">public</span><span>:
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>iterator_category </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span>forward_iterator_tag;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>value_type </span><span style="color:#ff79c6;">=
+</span><span>      std</span><span style="color:#ff79c6;">::</span><span>remove_reference_t&lt;</span><span style="font-style:italic;color:#8be9fd;">decltype</span><span>(</span><span style="color:#ff79c6;">*</span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">declval</span><span>&lt;OptReturnT&gt;())&gt;;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>element_type </span><span style="color:#ff79c6;">=</span><span> value_type;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>pointer </span><span style="color:#ff79c6;">=</span><span> value_type </span><span style="color:#ff79c6;">*</span><span>;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>reference </span><span style="color:#ff79c6;">=</span><span> value_type </span><span style="color:#ff79c6;">&amp;</span><span>;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>const_reference </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span>add_const_t&lt;reference&gt;;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>difference_type </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span style="font-style:italic;color:#66d9ef;">ptrdiff_t</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#50fa7b;">IteratorAdapter</span><span>(</span><span style="color:#ff79c6;">const</span><span> ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>)
+</span><span>      : </span><span style="color:#ffffff;">closure_</span><span>{std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure)}, </span><span style="color:#ffffff;">current_value_</span><span>{</span><span style="color:#50fa7b;">closure_</span><span>()} </span><span style="color:#ffffff;">{}
+</span><span>
+</span><span>  IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span style="color:#50fa7b;">operator++</span><span>() </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#8be9fd;">assert</span><span>(current_value_);
+</span><span>    current_value_ </span><span style="color:#ff79c6;">= </span><span style="color:#50fa7b;">closure_</span><span>();
+</span><span>    </span><span style="color:#ff79c6;">return *</span><span style="color:#bd93f9;">this</span><span>;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  reference </span><span style="color:#50fa7b;">operator*</span><span>() </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#8be9fd;">assert</span><span>(current_value_);
+</span><span>    </span><span style="color:#ff79c6;">return *</span><span>current_value_;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> OtherClosureT&gt;
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator!=</span><span>(</span><span style="color:#ff79c6;">const</span><span> IteratorAdapter&lt;OtherClosureT&gt; </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return </span><span style="color:#bd93f9;">true</span><span>;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator!=</span><span>(</span><span style="color:#ff79c6;">const</span><span> Sentinel </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return static_cast</span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">bool</span><span>&gt;(current_value_);
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> OtherT&gt; </span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator==</span><span>(</span><span style="color:#ff79c6;">const</span><span> OtherT </span><span style="color:#ff79c6;">&amp;</span><span style="font-style:italic;color:#ffb86c;">other</span><span>) </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return !</span><span>(</span><span style="color:#ff79c6;">*</span><span style="color:#bd93f9;">this </span><span style="color:#ff79c6;">==</span><span> other);
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#ff79c6;">private</span><span>:
+</span><span>  ClosureT closure_;
+</span><span>  OptReturnT current_value_;
+</span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt; </span><span style="font-style:italic;color:#8be9fd;">auto </span><span style="color:#50fa7b;">into_iter</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>) </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#50fa7b;">IteratorAdapter</span><span>{std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure)};
+</span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt; </span><span style="font-style:italic;color:#8be9fd;">class </span><span style="text-decoration:underline;color:#8be9fd;">IterableAdapter </span><span style="color:#ffffff;">{
+</span><span style="color:#ff79c6;">public</span><span>:
+</span><span>  </span><span style="color:#50fa7b;">IterableAdapter</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>) : </span><span style="color:#ffffff;">iter_</span><span>{std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure)} </span><span style="color:#ffffff;">{}
+</span><span>
+</span><span>  IteratorAdapter&lt;ClosureT&gt; </span><span style="color:#50fa7b;">begin</span><span>() </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{ </span><span style="color:#ff79c6;">return</span><span> iter_; </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  Sentinel </span><span style="color:#50fa7b;">end</span><span>() </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{ </span><span style="color:#ff79c6;">return </span><span style="color:#ffffff;">{}</span><span>; </span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#ff79c6;">private</span><span>:
+</span><span>  IteratorAdapter&lt;ClosureT&gt; iter_;
+</span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt; </span><span style="font-style:italic;color:#8be9fd;">auto </span><span style="color:#50fa7b;">into_iterable</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>) </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#50fa7b;">IterableAdapter</span><span>{std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure)};
+</span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#ffffff;">} </span><span style="color:#6272a4;">// namespace iter
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; </span><span style="color:#50fa7b;">vec</span><span>{</span><span style="color:#bd93f9;">10</span><span>, </span><span style="color:#bd93f9;">20</span><span>, </span><span style="color:#bd93f9;">30</span><span>};
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[</span><span style="color:#ff79c6;">&amp;</span><span>vec, idx </span><span style="color:#ff79c6;">= </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">size_t</span><span>{</span><span style="color:#bd93f9;">0</span><span>}]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return</span><span> idx </span><span style="color:#ff79c6;">&lt;</span><span> vec</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>() </span><span style="color:#ff79c6;">? </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">make_optional</span><span>(vec[idx</span><span style="color:#ff79c6;">++</span><span>]) </span><span style="color:#ff79c6;">:</span><span> std</span><span style="color:#ff79c6;">::</span><span>nullopt;
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">for </span><span>(</span><span style="font-style:italic;color:#8be9fd;">auto</span><span> value </span><span style="color:#ff79c6;">: </span><span>iter</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">into_iterable</span><span>(std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure))) </span><span style="color:#ffffff;">{
+</span><span>    std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt;</span><span> value </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+</details>
+<h2 id="sorry-i-may-have-lied"><a class="zola-anchor" href="#sorry-i-may-have-lied" aria-label="Anchor link for: sorry-i-may-have-lied">Sorry, I may have lied...</a></h2>
+<p>If you follow this and try to use the previous iterable with some fancy functional-like STL algorithms from <code>#include&lt;algorithm&gt;</code>, you might encounter compilation errors.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; </span><span style="color:#50fa7b;">vec</span><span>{</span><span style="color:#bd93f9;">10</span><span>, </span><span style="color:#bd93f9;">20</span><span>, </span><span style="color:#bd93f9;">30</span><span>};
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[</span><span style="color:#ff79c6;">&amp;</span><span>vec, idx </span><span style="color:#ff79c6;">= </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">size_t</span><span>{</span><span style="color:#bd93f9;">0</span><span>}]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return</span><span> idx </span><span style="color:#ff79c6;">&lt;</span><span> vec</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>() </span><span style="color:#ff79c6;">? </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">make_optional</span><span>(vec[idx</span><span style="color:#ff79c6;">++</span><span>]) </span><span style="color:#ff79c6;">:</span><span> std</span><span style="color:#ff79c6;">::</span><span>nullopt;
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> iterable </span><span style="color:#ff79c6;">= </span><span>iter</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">into_iterable</span><span>(std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure));
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; new_vec;
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">copy</span><span>(iterable</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">begin</span><span>(), iterable</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">end</span><span>(), std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">back_inserter</span><span>(new_vec));
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<pre data-lang="console" style="background-color:#282a36;color:#f8f8f2;" class="language-console "><code class="language-console" data-lang="console"><span>&lt;source&gt;: In function &#39;int main()&#39;:
+</span><span>&lt;source&gt;:96:12: error: no matching function for call to &#39;copy(iter::IteratorAdapter&lt;main()::&lt;lambda()&gt; &gt;, iter::Sentinel, std::back_insert_iterator&lt;std::vector&lt;int&gt; &gt;)&#39;
+</span><span>   96 |   std::copy(iterable.begin(), iterable.end(), std::back_inserter(new_vec));
+</span><span>      |   ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+</span><span>In file included from /opt/compiler-explorer/gcc-11.4.0/include/c++/11.4.0/vector:60,
+</span><span>                 from &lt;source&gt;:5:
+</span><span>/opt/compiler-explorer/gcc-11.4.0/include/c++/11.4.0/bits/stl_algobase.h:611:5: note: candidate: &#39;template&lt;class _II, class _OI&gt; _OI std::copy(_II, _II, _OI)&#39;
+</span><span>  611 |     copy(_II __first, _II __last, _OI __result)
+</span><span>      |     ^~~~
+</span><span>/opt/compiler-explorer/gcc-11.4.0/include/c++/11.4.0/bits/stl_algobase.h:611:5: note:   template argument deduction/substitution failed:
+</span><span>&lt;source&gt;:96:12: note:   deduced conflicting types for parameter &#39;_II&#39; (&#39;iter::IteratorAdapter&lt;main()::&lt;lambda()&gt; &gt;&#39; and &#39;iter::Sentinel&#39;)
+</span><span>   96 |   std::copy(iterable.begin(), iterable.end(), std::back_inserter(new_vec));
+</span><span>      |   ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+</span><span>I
+</span></code></pre>
+<p>Indeed, STL algorithms are expected to provide <code>begin()</code> and <code>end()</code> of the same type.</p>
+<p>Fair enough, we just need to add a constructor to our Sentinel to implicitly be converted into an <code>IteratorAdapter&lt;&gt;</code> and...
+No, this will never work since IteratorAdapter is generic over a lambda, thus its type is unique...</p>
+<p>In reality, what we created is not a true iterable. It is something which looks way more like <code>C++20</code> <a href="https://en.cppreference.com/w/cpp/ranges">ranges</a>! (And indeed, the Sentinel terminology comes from there). Ranges do not need both ends to share the same type. They just need to be comparable.</p>
+<p>So instead of pretending we have an iterable, we "just" have to create a range.</p>
+<h3 id="custom-ranges"><a class="zola-anchor" href="#custom-ranges" aria-label="Anchor link for: custom-ranges">Custom Ranges</a></h3>
+<p>We already did most of the work for this. However, ranges have more requirements.</p>
+<ul>
+<li>postfix operator (<code>it++</code>)</li>
+</ul>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span>IteratorAdapter </span><span style="color:#50fa7b;">operator++</span><span>(</span><span style="font-style:italic;color:#ffb86c;">int</span><span>)
+</span><span style="color:#ffffff;">{
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> previous </span><span style="color:#ff79c6;">= *</span><span style="color:#bd93f9;">this</span><span>;
+</span><span>  </span><span style="color:#ff79c6;">++*</span><span style="color:#bd93f9;">this</span><span>;
+</span><span>  </span><span style="color:#ff79c6;">return</span><span> previous;
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<ul>
+<li><code>operator==</code>: negation of <code>operator!=</code></li>
+</ul>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> OtherT&gt;
+</span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator==</span><span>(</span><span style="color:#ff79c6;">const</span><span> OtherT </span><span style="color:#ff79c6;">&amp;</span><span style="font-style:italic;color:#ffb86c;">other</span><span>) </span><span style="color:#ff79c6;">const
+</span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return !</span><span>(</span><span style="color:#ff79c6;">*</span><span style="color:#bd93f9;">this </span><span style="color:#ff79c6;">!=</span><span> other);
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<ul>
+<li>Move constructor (which triggers the <a href="https://en.cppreference.com/w/cpp/language/rule_of_three">rule of 5</a>).</li>
+</ul>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#50fa7b;">IteratorAdapter</span><span>(</span><span style="color:#ff79c6;">const</span><span> IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">= default</span><span>;
+</span><span style="color:#50fa7b;">IteratorAdapter</span><span>(IteratorAdapter </span><span style="color:#ff79c6;">&amp;&amp;</span><span>) </span><span style="color:#ff79c6;">= default</span><span>;
+</span><span>IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span style="color:#50fa7b;">operator=</span><span>(</span><span style="color:#ff79c6;">const</span><span> IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">= default</span><span>;
+</span><span>IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span style="color:#50fa7b;">operator=</span><span>(IteratorAdapter </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">other</span><span>)
+</span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">swap</span><span>(closure_, other</span><span style="color:#ff79c6;">.</span><span style="color:#ffffff;">closure_</span><span>);
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">swap</span><span>(current_value_, other</span><span style="color:#ff79c6;">.</span><span style="color:#ffffff;">current_value_</span><span>);
+</span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span style="color:#50fa7b;">IteratorAdapter</span><span>(</span><span style="color:#ff79c6;">const</span><span> ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span>closure)</span><span style="color:#ff79c6;">:
+</span><span>    closure_</span><span style="color:#ffffff;">{ </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure) </span><span style="color:#ffffff;">}</span><span>, </span><span style="color:#50fa7b;">current_value_</span><span>{ </span><span style="color:#50fa7b;">closure_</span><span>() }
+</span><span style="color:#ffffff;">{
+</span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#ff79c6;">~</span><span style="color:#50fa7b;">IteratorAdapter</span><span>() </span><span style="color:#ff79c6;">= default</span><span>;
+</span></code></pre>
+<p>Let's also rename our IterableAdapter to RangeAdapter and the helper function to something more logical.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt;
+</span><span style="font-style:italic;color:#8be9fd;">auto </span><span style="color:#50fa7b;">into_range</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>)
+</span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#50fa7b;">RangeAdapter</span><span>{ std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure) };
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<p>And finally we can use it with.</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; </span><span style="color:#50fa7b;">vec</span><span>{</span><span style="color:#bd93f9;">10</span><span>, </span><span style="color:#bd93f9;">20</span><span>, </span><span style="color:#bd93f9;">30</span><span>};
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[</span><span style="color:#ff79c6;">&amp;</span><span>vec, idx </span><span style="color:#ff79c6;">= </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">size_t</span><span>{</span><span style="color:#bd93f9;">0</span><span>}]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return</span><span> idx </span><span style="color:#ff79c6;">&lt;</span><span> vec</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>() </span><span style="color:#ff79c6;">? </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">make_optional</span><span>(vec[idx</span><span style="color:#ff79c6;">++</span><span>]) </span><span style="color:#ff79c6;">:</span><span> std</span><span style="color:#ff79c6;">::</span><span>nullopt;
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> range </span><span style="color:#ff79c6;">= </span><span>iter</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">into_range</span><span>(std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure));
+</span><span>
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; new_vec;
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>ranges</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">copy</span><span>(range, std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">back_inserter</span><span>(new_vec));
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;Number of copied elements: &quot; </span><span style="color:#ff79c6;">&lt;&lt;</span><span> new_vec</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>() </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#bd93f9;">0</span><span>;
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<pre data-lang="console" style="background-color:#282a36;color:#f8f8f2;" class="language-console "><code class="language-console" data-lang="console"><span>Number of copied elements: 3
+</span></code></pre>
+<pre data-lang="Achievement-unlocked" style="background-color:#282a36;color:#f8f8f2;" class="language-Achievement-unlocked "><code class="language-Achievement-unlocked" data-lang="Achievement-unlocked"><span>std::ranges&#39; algorithms compatibility.
+</span></code></pre>
+<details>
+  <summary>Full implementation:</summary>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;algorithm&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;cassert&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;iostream&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;optional&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;type_traits&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;utility&gt;
+</span><span style="color:#ff79c6;">#include </span><span style="color:#f1fa8c;">&lt;vector&gt;
+</span><span>
+</span><span style="color:#ff79c6;">namespace </span><span>iter </span><span style="color:#ffffff;">{
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> T&gt;
+</span><span style="font-style:italic;color:#8be9fd;">struct </span><span>is_optional: </span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">std</span><span style="text-decoration:underline;font-style:italic;color:#ff79c6;">::</span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">false_type </span><span style="color:#ffffff;">{
+</span><span style="color:#ffffff;">}</span><span>;
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> T&gt;
+</span><span style="font-style:italic;color:#8be9fd;">struct </span><span>is_optional&lt;std</span><span style="color:#ff79c6;">::</span><span>optional&lt;T&gt;&gt;: </span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">std</span><span style="text-decoration:underline;font-style:italic;color:#ff79c6;">::</span><span style="text-decoration:underline;font-style:italic;color:#8be9fd;">true_type </span><span style="color:#ffffff;">{
+</span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> T&gt;
+</span><span style="color:#ff79c6;">constexpr </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> is_optional_v </span><span style="color:#ff79c6;">=</span><span> is_optional&lt;T&gt;</span><span style="color:#ff79c6;">::</span><span>value;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">struct </span><span>Sentinel </span><span style="color:#ffffff;">{
+</span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt;
+</span><span style="font-style:italic;color:#8be9fd;">class </span><span style="text-decoration:underline;color:#8be9fd;">IteratorAdapter </span><span style="color:#ffffff;">{
+</span><span style="color:#ff79c6;">private</span><span>:
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>OptReturnT </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span>invoke_result_t&lt;ClosureT&gt;;
+</span><span>
+</span><span style="color:#ff79c6;">public</span><span>:
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>iterator_category </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span>forward_iterator_tag;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>value_type </span><span style="color:#ff79c6;">=
+</span><span>      std</span><span style="color:#ff79c6;">::</span><span>remove_reference_t&lt;</span><span style="font-style:italic;color:#8be9fd;">decltype</span><span>(</span><span style="color:#ff79c6;">*</span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">declval</span><span>&lt;OptReturnT&gt;())&gt;;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>element_type </span><span style="color:#ff79c6;">=</span><span> value_type;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>pointer </span><span style="color:#ff79c6;">=</span><span> value_type </span><span style="color:#ff79c6;">*</span><span>;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>reference </span><span style="color:#ff79c6;">=</span><span> value_type </span><span style="color:#ff79c6;">&amp;</span><span>;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>const_reference </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span>add_const_t&lt;reference&gt;;
+</span><span>  </span><span style="color:#ff79c6;">using </span><span>difference_type </span><span style="color:#ff79c6;">=</span><span> std</span><span style="color:#ff79c6;">::</span><span style="font-style:italic;color:#66d9ef;">ptrdiff_t</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#50fa7b;">IteratorAdapter</span><span>(</span><span style="color:#ff79c6;">const</span><span> IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">= default</span><span>;
+</span><span>  </span><span style="color:#50fa7b;">IteratorAdapter</span><span>(IteratorAdapter </span><span style="color:#ff79c6;">&amp;&amp;</span><span>) </span><span style="color:#ff79c6;">= default</span><span>;
+</span><span>  IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span style="color:#50fa7b;">operator=</span><span>(</span><span style="color:#ff79c6;">const</span><span> IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">= default</span><span>;
+</span><span>  IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span style="color:#50fa7b;">operator=</span><span>(IteratorAdapter </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">other</span><span>)
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>    std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">swap</span><span>(closure_, other</span><span style="color:#ff79c6;">.</span><span style="color:#ffffff;">closure_</span><span>);
+</span><span>    std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">swap</span><span>(current_value_, other</span><span style="color:#ff79c6;">.</span><span style="color:#ffffff;">current_value_</span><span>);
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#50fa7b;">IteratorAdapter</span><span>(</span><span style="color:#ff79c6;">const</span><span> ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>):
+</span><span>      </span><span style="color:#ffffff;">closure_</span><span>{ std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure) }, </span><span style="color:#ffffff;">current_value_</span><span>{ </span><span style="color:#50fa7b;">closure_</span><span>() }
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="color:#50fa7b;">~IteratorAdapter</span><span>() </span><span style="color:#ff79c6;">= default</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#6272a4;">// prefix
+</span><span>  IteratorAdapter </span><span style="color:#ff79c6;">&amp;</span><span style="color:#50fa7b;">operator++</span><span>()
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#8be9fd;">assert</span><span>(current_value_);
+</span><span>    current_value_  </span><span style="color:#ff79c6;">= </span><span style="color:#50fa7b;">closure_</span><span>();
+</span><span>    </span><span style="color:#ff79c6;">return *</span><span style="color:#bd93f9;">this</span><span>;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="color:#6272a4;">// postfix
+</span><span>  IteratorAdapter </span><span style="color:#50fa7b;">operator++</span><span>(</span><span style="font-style:italic;color:#ffb86c;">int</span><span>)
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> previous </span><span style="color:#ff79c6;">= *</span><span style="color:#bd93f9;">this</span><span>;
+</span><span>    </span><span style="color:#ff79c6;">++*</span><span style="color:#bd93f9;">this</span><span>;
+</span><span>    </span><span style="color:#ff79c6;">return</span><span> previous;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  reference </span><span style="color:#50fa7b;">operator*</span><span>()
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#8be9fd;">assert</span><span>(current_value_);
+</span><span>    </span><span style="color:#ff79c6;">return *</span><span>current_value_;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  const_reference </span><span style="color:#50fa7b;">operator*</span><span>() </span><span style="color:#ff79c6;">const
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#8be9fd;">assert</span><span>(current_value_);
+</span><span>    </span><span style="color:#ff79c6;">return *</span><span>current_value_;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> OtherClosureT&gt;
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator!=</span><span>(</span><span style="color:#ff79c6;">const</span><span> IteratorAdapter&lt;OtherClosureT&gt; </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">const
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return </span><span style="color:#bd93f9;">true</span><span>;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator!=</span><span>(</span><span style="color:#ff79c6;">const</span><span> Sentinel </span><span style="color:#ff79c6;">&amp;</span><span>) </span><span style="color:#ff79c6;">const
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return static_cast</span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">bool</span><span>&gt;(current_value_);
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> OtherT&gt;
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">bool </span><span style="color:#50fa7b;">operator==</span><span>(</span><span style="color:#ff79c6;">const</span><span> OtherT </span><span style="color:#ff79c6;">&amp;</span><span style="font-style:italic;color:#ffb86c;">other</span><span>) </span><span style="color:#ff79c6;">const
+</span><span>  </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return !</span><span>(</span><span style="color:#ff79c6;">*</span><span style="color:#bd93f9;">this </span><span style="color:#ff79c6;">==</span><span> other);
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#ff79c6;">private</span><span>:
+</span><span>  ClosureT closure_;
+</span><span>  OptReturnT current_value_;
+</span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt;
+</span><span style="font-style:italic;color:#8be9fd;">auto </span><span style="color:#50fa7b;">into_iter</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>)
+</span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#50fa7b;">IteratorAdapter</span><span>{ std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure) };
+</span><span style="color:#ffffff;">}
+</span><span>
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt;
+</span><span style="font-style:italic;color:#8be9fd;">class </span><span style="text-decoration:underline;color:#8be9fd;">RangeAdapter </span><span style="color:#ffffff;">{
+</span><span style="color:#ff79c6;">public</span><span>:
+</span><span>  </span><span style="color:#50fa7b;">RangeAdapter</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>): </span><span style="color:#ffffff;">iter_</span><span>{ std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure) } </span><span style="color:#ffffff;">{ }
+</span><span>
+</span><span>  IteratorAdapter&lt;ClosureT&gt; </span><span style="color:#50fa7b;">begin</span><span>() </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{ </span><span style="color:#ff79c6;">return</span><span> iter_; </span><span style="color:#ffffff;">}
+</span><span>
+</span><span>  Sentinel </span><span style="color:#50fa7b;">end</span><span>() </span><span style="color:#ff79c6;">const </span><span style="color:#ffffff;">{ </span><span style="color:#ff79c6;">return </span><span style="color:#ffffff;">{}</span><span>; </span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#ff79c6;">private</span><span>:
+</span><span>  IteratorAdapter&lt;ClosureT&gt; iter_;
+</span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">template </span><span>&lt;</span><span style="font-style:italic;color:#8be9fd;">typename</span><span> ClosureT&gt;
+</span><span style="font-style:italic;color:#8be9fd;">auto </span><span style="color:#50fa7b;">into_range</span><span>(ClosureT </span><span style="color:#ff79c6;">&amp;&amp;</span><span style="font-style:italic;color:#ffb86c;">closure</span><span>)
+</span><span style="color:#ffffff;">{
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#50fa7b;">RangeAdapter</span><span>{ std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">forward</span><span>&lt;ClosureT&gt;(closure) };
+</span><span style="color:#ffffff;">}
+</span><span>
+</span><span style="color:#ffffff;">}  </span><span style="color:#6272a4;">// iter
+</span><span>
+</span><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; </span><span style="color:#50fa7b;">vec</span><span>{</span><span style="color:#bd93f9;">10</span><span>, </span><span style="color:#bd93f9;">20</span><span>, </span><span style="color:#bd93f9;">30</span><span>};
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[</span><span style="color:#ff79c6;">&amp;</span><span>vec, idx </span><span style="color:#ff79c6;">= </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">size_t</span><span>{</span><span style="color:#bd93f9;">0</span><span>}]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return</span><span> idx </span><span style="color:#ff79c6;">&lt;</span><span> vec</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>() </span><span style="color:#ff79c6;">? </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">make_optional</span><span>(vec[idx</span><span style="color:#ff79c6;">++</span><span>]) </span><span style="color:#ff79c6;">:</span><span> std</span><span style="color:#ff79c6;">::</span><span>nullopt;
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> range </span><span style="color:#ff79c6;">= </span><span>iter</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">into_range</span><span>(std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure));
+</span><span>
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>vector&lt;</span><span style="font-style:italic;color:#8be9fd;">int</span><span>&gt; new_vec;
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>ranges</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">copy</span><span>(range, std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">back_inserter</span><span>(new_vec));
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>cout </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;Number of copied elements: &quot; </span><span style="color:#ff79c6;">&lt;&lt;</span><span> new_vec</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>() </span><span style="color:#ff79c6;">&lt;&lt; </span><span style="color:#f1fa8c;">&quot;</span><span style="color:#ff79c6;">\n</span><span style="color:#f1fa8c;">&quot;</span><span>;
+</span><span>
+</span><span>  </span><span style="color:#ff79c6;">return </span><span style="color:#bd93f9;">0</span><span>;
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+</details>
+<h2 id="afterword"><a class="zola-anchor" href="#afterword" aria-label="Anchor link for: afterword">Afterword</a></h2>
+<p>The main goal of this post was to present a little framework that could be reused to ease the writing of iterators in C++17/20.</p>
+<p>From what I have tested, since closures act as syntactic sugar for anonymous structs, this is a zero-cost abstraction. See the compilation result of:</p>
+<pre data-lang="cpp" style="background-color:#282a36;color:#f8f8f2;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">main</span><span>() </span><span style="color:#ffffff;">{
+</span><span>  std</span><span style="color:#ff79c6;">::</span><span>array </span><span style="color:#50fa7b;">arr</span><span>{</span><span style="color:#bd93f9;">10</span><span>, </span><span style="color:#bd93f9;">20</span><span>, </span><span style="color:#bd93f9;">30</span><span>};
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">auto</span><span> closure </span><span style="color:#ff79c6;">= </span><span>[</span><span style="color:#ff79c6;">&amp;</span><span>arr, idx </span><span style="color:#ff79c6;">= </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">size_t</span><span>{</span><span style="color:#bd93f9;">0</span><span>}]() </span><span style="color:#ff79c6;">mutable </span><span style="color:#ffffff;">{
+</span><span>    </span><span style="color:#ff79c6;">return </span><span>(idx </span><span style="color:#ff79c6;">&lt;</span><span> arr</span><span style="color:#ff79c6;">.</span><span style="color:#50fa7b;">size</span><span>()) </span><span style="color:#ff79c6;">? </span><span>std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">make_optional</span><span>(arr[idx</span><span style="color:#ff79c6;">++</span><span>]) </span><span style="color:#ff79c6;">:</span><span> std</span><span style="color:#ff79c6;">::</span><span>nullopt;
+</span><span>  </span><span style="color:#ffffff;">}</span><span>;
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#8be9fd;">int </span><span style="color:#50fa7b;">sum</span><span>{</span><span style="color:#bd93f9;">0</span><span>};
+</span><span>  </span><span style="color:#ff79c6;">for </span><span>(</span><span style="font-style:italic;color:#8be9fd;">int</span><span> value</span><span style="color:#ff79c6;">: </span><span>iter</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">into_range</span><span>(std</span><span style="color:#ff79c6;">::</span><span style="color:#50fa7b;">move</span><span>(closure))) </span><span style="color:#ffffff;">{
+</span><span>    sum </span><span style="color:#ff79c6;">+=</span><span> value;
+</span><span>  </span><span style="color:#ffffff;">}
+</span><span>  </span><span style="color:#ff79c6;">return</span><span> sum;
+</span><span style="color:#ffffff;">}
+</span></code></pre>
+<pre data-lang="asm" style="background-color:#282a36;color:#f8f8f2;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#50fa7b;">main:
+</span><span style="color:#50fa7b;">  </span><span style="color:#ff79c6;">mov     </span><span style="font-style:italic;color:#ffb86c;">eax</span><span>, </span><span style="color:#bd93f9;">60
+</span><span style="color:#50fa7b;">  </span><span style="color:#ff79c6;">ret
+</span></code></pre>
+<p>Since closure types are unnamed, these ranges are not really meant to be stored as members (even if it is possible using templates). They offer a simple interface for quick, use-once iterators, as it is more common in functional languages.</p>
+<p>If STL compatibility is needed, the <code>C++20</code> range interface of the last section is required. But maybe it would be easier to use a more conventional <code>range + view</code> approach.</p>
+<h2 id="acknowledgements"><a class="zola-anchor" href="#acknowledgements" aria-label="Anchor link for: acknowledgements">Acknowledgements</a></h2>
+<p>A huge thank you to <a href="https://augfab.dev">Augustin Fabre</a>, who helped me design the interfaces of the adapters and sculpt the shapeless idea of closures as iterators. Thanks <a href="https://github.com/Ninikiril">Ninikiril</a> for proofreading and for finding a nasty off-by-one error.</p>
+
+        </div>
+    </div>
+
+    
+        <div class="toc spacer">
+            <ul>
+                <h2>Content</h2>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#tl-dr">TL;DR</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#prerequisites">Prerequisites</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#introduction">Introduction</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#1-2-3-mom-i-can-count">1... 2... 3... Mom, I can count!</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#indexing-using-a-lambda">Indexing using a lambda</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#one-step-too-far">One step too far</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#c-expectations">C++ expectations</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#plumbing-time">Plumbing time!</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#sorry-i-may-have-lied">Sorry, I may have lied...</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#afterword">Afterword</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/closures-as-iterators/#acknowledgements">Acknowledgements</a>
+                </li>
+                
+            </ul>
+        </div>
+    
+
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script>
+      // Handling user preferred theme here to get rid of flickering.
+
+      /**
+      * Handling color scheme choice.
+      * Courtesy: https://css-tricks.com/a-complete-guide-to-dark-mode-on-the-web/#combining
+      * */
+
+      // Checking the user already did choose a custom theme.
+      let currentTheme = localStorage.getItem("theme");
+
+      if (currentTheme === null) {
+        // User preferences
+        const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+        if (prefersDarkScheme.matches) {
+          currentTheme = "dark";
+        } else {
+          currentTheme = "light";
+        }
+        localStorage.setItem("theme", currentTheme);
+      }
+      if (currentTheme === "dark") {
+        document.documentElement.classList.add("dark-theme");
+      }
+    </script>
+
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+    <!-- Enable responsiveness on mobile devices-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="color-scheme" content="dark light">
+
+    <title>Compendium</title>
+
+    
+        <!-- Theme picker -->
+        <script type="text/javascript" src="https://spineki.github.io/theme_picker.js"></script>
+        <!-- Search bar -->
+        <script type="text/javascript" src="https://spineki.github.io/elasticlunr.min.js"></script>
+        <script type="text/javascript" src="https://spineki.github.io/search.js"></script>
+        <!-- Math rendering -->
+        <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
+        <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+        </script>
+        <!-- Add copy button to pre blocks -->
+        <script type="text/javascript" src="https://spineki.github.io/copy_button.js" defer></script>
+    
+
+    <!-- CSS -->
+    
+    <link rel="stylesheet" href="https://spineki.github.io/book.css">
+    
+
+    
+    
+</head>
+
+<body>
+    <div class="main-content">
+        
+    <div class="spacer"></div>
+
+    <div class="page">
+        <div class="nav-top">
+    <nav class="nav-content" role="navigation">
+        <ul>
+            <li>
+                <a href="/"> Home </a>
+            </li>
+            <li>
+                <div class="search-container">
+                    <input id="search" type="search" placeholder="Search..." value="">
+                    <div class="search-results">
+                        <ul class="search-results__items"></ul>
+                    </div>
+                </div>
+            </li>
+            <li class="filler"></li>
+            <li>
+                <color-scheme-picker></color-theme-picker>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+        <h1>Transferring data using QR codes</h1>
+
+        <ul class="page-stats">
+            <li>
+                <span>2025-07-10</span>
+                <span>9 minute read </span>
+                <span>(1612 words)</span>
+            </li>
+            <li>
+                <ul class="tags">
+                    
+                    
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/protocol/">
+                            #protocol
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a class="tag" href="https://spineki.github.io/tag/rust/">
+                            #rust
+                        </a>
+                    </li>
+                    
+                    
+                </ul>
+            </li>
+        </ul>
+
+        <div class="markdown-container">
+            <p>A proof-of-concept to share data using QR codes.</p>
+
+            <h2 id="tl-dr"><a class="zola-anchor" href="#tl-dr" aria-label="Anchor link for: tl-dr">TL;DR</a></h2>
+<ul>
+<li>It is possible to rely on cameras and screens to share data in a <em>pull-only</em> fashion using QR codes.</li>
+<li>QR codes are only one way to do it, it can be generalized to any image-based content sharing.</li>
+<li>The ending condition of the protocol has a fatal flaw, that can be solved by relying on the user.</li>
+</ul>
+<h2 id="prerequisites"><a class="zola-anchor" href="#prerequisites" aria-label="Anchor link for: prerequisites">Prerequisites</a></h2>
+<p>Forget about common sense. This might be one of the least energy-efficient, slowest, device dependent protocol out there.</p>
+<h2 id="introduction"><a class="zola-anchor" href="#introduction" aria-label="Anchor link for: introduction">Introduction</a></h2>
+<p>A few years ago, I was once stuck with two laptops, with a broken wifi connection, a non-working bluetooth antenna and no USB storage in sight to share a simple file between them. Since then, I was looking for ways to share data without relying on any external support or network, even at a very low rate.</p>
+<p>As part of this challenge, I set myself the following framework:</p>
+<ul>
+<li>I could only use the two laptops. Thus, I had access to two screens and two webcams. Nothing more.</li>
+<li>Only one-to-one transfers needed to be supported.</li>
+<li>Only one-way transfers needed to be supported.</li>
+<li>Only one document at a time would be sent.</li>
+<li>I did not want to bother with timeouts, retries, etc. to keep the protocol simple.</li>
+<li>And finally, since QR-codes are fun, I wanted to use them to transfer data. (I was only interested in their use, not in creating them from scratch).</li>
+</ul>
+<h2 id="vocabulary"><a class="zola-anchor" href="#vocabulary" aria-label="Anchor link for: vocabulary">Vocabulary</a></h2>
+<p>To make the following easier:</p>
+<ul>
+<li>let $S$ be the $sender$, sending data (bytes from a book, a picture, etc.).</li>
+<li>let $R$ be the $receiver$, receiving the data and saving it as a binary file.</li>
+</ul>
+<h2 id="basic-idea-a-qr-code-based-protocol"><a class="zola-anchor" href="#basic-idea-a-qr-code-based-protocol" aria-label="Anchor link for: basic-idea-a-qr-code-based-protocol">Basic idea, a QR-code-based protocol</a></h2>
+<p><a href="https://www.qrcode.com/en/">QR codes</a> are a neat way to share data by scanning them. QR codes come in multiple flavours (numeric, alphanumeric, byte and kana) with different level of <a href="https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction">error correction</a>.</p>
+<p>Note:</p>
+<blockquote>
+<p>Once a QR code is printed or displayed on screen, fetching their data is a <em>pull-only</em> process. The reader has to "pull" the information by taking a picture, and analyzing it. Showing a QR code is not enough to send information. A transfer is relying on the Read to ... read [sic] it.</p>
+</blockquote>
+<blockquote>
+<p>This currently obvious fact will come out important later</p>
+</blockquote>
+<p>A first basic way to send a file using qr-codes would be the following:</p>
+<ul>
+<li>$S$ side:
+<ul>
+<li>take its binary content (bytes)</li>
+<li>turn it into a QR code.</li>
+<li>show it</li>
+</ul>
+</li>
+<li>$R$ side:
+<ul>
+<li>scan until a QR code is detected</li>
+<li>store the bytes in a file</li>
+</ul>
+</li>
+</ul>
+<p>So something as simple as</p>
+<p>$$
+S : file \xrightarrow{reading} bytes \xrightarrow{QR\ code\ encoding} QR\ code \xrightarrow{decoding} bytes : R
+$$</p>
+<h2 id="it-gets-more-complex"><a class="zola-anchor" href="#it-gets-more-complex" aria-label="Anchor link for: it-gets-more-complex">It gets more complex</a></h2>
+<p>However, this would only work if the whole file content fits within a single QR code. According to <a href="https://en.wikipedia.org/wiki/QR_code">the wikipedia page</a>, a byte QR code has a maximum capacity of $2,953$ bytes ($\sim 2.9kiB$). In order to share a bigger file, we thus need to slice it in chunks.</p>
+<blockquote>
+<p>From now on, let $chunk$ be the data bytes transferred in a single QR code.</p>
+</blockquote>
+<p>The protocol thus becomes:</p>
+<p>$$
+S : file \xrightarrow{reading} byte\ stream \xrightarrow{chunking} chunk \xrightarrow{QR\ code\ encoding} QR\ code \xrightarrow{decoding} bytes : R
+$$</p>
+<p>In an ideal world, $S$ could fire-and-forget the QR codes one after the other and could expect $R$ to read them fast enough while they are on screen. But in our reality, this suffers from majors issues:</p>
+<ol>
+<li>What if $R$ struggles to read a QR code and $S$ updates the current chunk in the mean time?</li>
+<li>Even worse, what would happen if two consecutive chunks contain the same bytes? How can $R$ spot the difference between a QR code displayed during a long time or two identical successive QR codes?</li>
+<li>How can $R$ and $S$ know that the transaction is complete?</li>
+</ol>
+<p>We need a proper protocol to fix these issues and make sure both $R$ and $S$ are in sync.</p>
+<h2 id="protocol"><a class="zola-anchor" href="#protocol" aria-label="Anchor link for: protocol">Protocol</a></h2>
+<p>Let's start by taking the point of view of $S$.</p>
+<p>$S$ wants to display the next QR code whenever it's possible. To do so, $R$ needs to collaborate and to notify $S$ that it is done reading the current chunk.
+There are multiple ways to provide this information. But to keep it simple (and make it debugging-friendly), $R$ can show the number/index of the latest read QR code.
+This solves the first point from the previous section.</p>
+<blockquote>
+<p>Hence, both $R$ and $S$ need to be able to display a QR code. (two screens required)... which implies that both $R$ and $S$ needs to be able to read QR codes! (two webcams).</p>
+</blockquote>
+<p>But how to tell apart two consecutive identical chunk? Let's do exactly what we did with $R$ but on the $S$ side! $S$ can show a QR code by encoding <code>[current_chunk_index, chunk]</code>. $R$ can read the QR code, check the <code>current_chunk_index</code> and find out if it is a new chunk. This solves the second issue.</p>
+<p>The protocol thus becomes :</p>
+<pre data-lang="protocol: S side" style="background-color:#282a36;color:#f8f8f2;" class="language-protocol: S side "><code class="language-protocol: S side" data-lang="protocol: S side"><span>When R displays a QR code encoding the value N
+</span><span>  show a QR encoding [N + 1, chunk_N+1]
+</span></code></pre>
+<pre data-lang="protocol: R side" style="background-color:#282a36;color:#f8f8f2;" class="language-protocol: R side "><code class="language-protocol: R side" data-lang="protocol: R side"><span>when S show Nth chunk
+</span><span>  decode it
+</span><span>  show a QR code encoding the number N
+</span></code></pre>
+<h2 id="let-me-stop"><a class="zola-anchor" href="#let-me-stop" aria-label="Anchor link for: let-me-stop">Let me stop!</a></h2>
+<p>Finally, we need to fix the third issue and find a wait to detect the transfer's end. From $R$ point-of-view, knowing in advance the number of chunks would be enough to detect the end of the transfer. "I am expecting X chunks, I received X chunk, the transfer is over".</p>
+<p>However, due to the <em>pull-only</em> nature of the protocol, $S$ <em>cannot</em> know when to stop.</p>
+<p>Indeed, let's imagine the end of a transfer:</p>
+<ul>
+<li>S: "I am showing the last chunk, but I don't know if R saw it. Thus I have to keep showing it."</li>
+<li>R: "I saw the last chunk! I need to show to S that I indeed received it so we can both stop. But I have to keep showing it until I know for sure that S is aware of it."</li>
+<li>S: "Oh! R has indeed received my latest chunk. I will show my acknowledgement...
+But I cannot stop until I know that R is aware of it."</li>
+</ul>
+<blockquote>
+<p>...and they kept talking happily ever after</p>
+</blockquote>
+<p>It horribily looks like a <em>real</em>-life example of the <a href="https://en.wikipedia.org/wiki/Two_Generals%27_Problem">Two general's problem</a>.</p>
+<blockquote>
+<p>Two generals ($S$ and $R$) send messengers (chunks) across a valley (the QR codes) to plan a coordinate attack (the end of the transfer). However, an ennemy faction in the middle (<em>pull-only</em> uncertainty timings) can capture the messengers. It is proven that the generals <em>cannot</em> craft any clever protocol to reach an exact consensus in a finite time.</p>
+</blockquote>
+<p>Since my original goal is to send files between two laptops facing each other, we can rely on a third all-mighty entity, with infinite wisdom and perfect knowledge to help solving this conundrum: the user.</p>
+<p>I know, it is kind of cheating. But if $R$ shows a message on the screen "All chunks received, you can now stop $S$" before exiting, the user can now safely stop $S$ manually.</p>
+<h2 id="full-example-with-a-3-chunk-long-transfer"><a class="zola-anchor" href="#full-example-with-a-3-chunk-long-transfer" aria-label="Anchor link for: full-example-with-a-3-chunk-long-transfer">Full example with a 3-chunk long transfer</a></h2>
+<pre data-lang="text" style="background-color:#282a36;color:#f8f8f2;" class="language-text "><code class="language-text" data-lang="text"><span>S: Shows 3
+</span><span>R: Reads 3 and shows 0 to acknowledge the transaction
+</span><span>S: Reads 0 from R and shows [1, chunk_1]
+</span><span>S: Is too fast and reads 0 again from R. No update since it is showing 1.
+</span><span>R: Reads 1, since 0 + 1 = 1, saves chunk_1 and shows 1
+</span><span>S: Reads 1 from R and shows [2, chunk_2]
+</span><span>R: Reads 2, since 1 + 1 = 2, saves chunk_2 and shows 2
+</span><span>R: Is too fast and reads again [2, chunk_2]. No update since it is showing 2.
+</span><span>S: Reads 2 from R and shows the final [3, chunk_3]
+</span><span>R: Reads 3, since 2 + 1 = 3, saves chunk_3. Thanks to the first transaction, it knows there are no chunk to receives. Exit with a message asking to stop S.
+</span><span>
+</span><span>User reads R&#39;s message and stops S.
+</span></code></pre>
+<p>If you want to have fun, here are the the QR codes.</p>
+<h3 id="s"><a class="zola-anchor" href="#s" aria-label="Anchor link for: s">$S$</a></h3>
+<table width="100%">
+  <tr>
+      <th>Number of chunks</th>
+      <th>Chunk 1</th>
+      <th>Chunk 2</th>
+      <th>Chunk 3</th>
+    </tr>
+  <tr>
+    <td width="25%"><image src="/qr_codes/s_0.png" style="max-height:100%; max-width:100%" /></td>
+    <td width="25%"><image src="/qr_codes/s_1.png" style="max-height:100%; max-width:100%" /></td>
+    <td width="25%"><image src="/qr_codes/s_2.png" style="max-height:100%; max-width:100%" /></td>
+    <td width="25%"><image src="/qr_codes/s_3.png" style="max-height:100%; max-width:100%"/></td>
+  </tr>
+</table>
+<h3 id="r"><a class="zola-anchor" href="#r" aria-label="Anchor link for: r">$R$</a></h3>
+<table width="100%">
+  <tr>
+      <th>Ack transaction</th>
+      <th>Ack Chunk 1</th>
+      <th>Ack Chunk 2</th>
+    </tr>
+  <tr>
+    <td width="33%"><image src="/qr_codes/r_0.png" style="max-height:100%; max-width:100%" /></td>
+    <td width="33%"><image src="/qr_codes/r_1.png" style="max-height:100%; max-width:100%" /></td>
+    <td width="33%"><image src="/qr_codes/r_2.png" style="max-height:100%; max-width:100%" /></td>
+  </tr>
+</table>
+<p>No ack for chunk 3</p>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>It is possible to solve the 3 main issues that arose while designing this protocol.</p>
+<p>I am sorry for any network engineer reading this, but it was a fun proof-of-concept to make.</p>
+<p>In the end, QR codes are not the interesting part of it, any way of visually encode information would work the same way. This illustrates a basic way to share data using:</p>
+<ul>
+<li>Asynchrous sender and receiver</li>
+<li>Which cannot make sure the other received the information they just sent except by <em>pulling</em> an acknowledgement.</li>
+</ul>
+
+        </div>
+    </div>
+
+    
+        <div class="toc spacer">
+            <ul>
+                <h2>Content</h2>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#tl-dr">TL;DR</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#prerequisites">Prerequisites</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#introduction">Introduction</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#vocabulary">Vocabulary</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#basic-idea-a-qr-code-based-protocol">Basic idea, a QR-code-based protocol</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#it-gets-more-complex">It gets more complex</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#protocol">Protocol</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#let-me-stop">Let me stop!</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#full-example-with-a-3-chunk-long-transfer">Full example with a 3-chunk long transfer</a>
+                </li>
+                
+                <li>
+                    <a href="https://spineki.github.io/articles/qr-codes-protocol/#conclusion">Conclusion</a>
+                </li>
+                
+            </ul>
+        </div>
+    
+
+    </div>
+</body>
+
+</html>
